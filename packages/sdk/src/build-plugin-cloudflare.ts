@@ -134,12 +134,10 @@ ${userAppImport}
 registerApiProvider(getCloudflareAIBindingApiProvider());
 
 // Capture the binding reference at module init; invoke it only per request.
-if (env.AI) {
-  registerProvider('cloudflare', {
-    api: 'cloudflare-ai-binding',
-    binding: env.AI,
-  });
-}
+registerProvider('cloudflare', {
+  api: 'cloudflare-ai-binding',
+  binding: env.AI,
+});
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
