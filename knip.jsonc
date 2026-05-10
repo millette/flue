@@ -1,0 +1,31 @@
+{
+	"$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+	"workspaces": {
+		".": {
+			"ignoreDependencies": ["bgproc", "tsx", "@flue/sdk", "just-bash"]
+		},
+		"packages/sdk": {
+			"ignoreDependencies": ["just-bash", "@hono/node-server"]
+		},
+		"packages/cli": {},
+		"examples/hello-world": {
+			"entry": [".flue/app.ts", ".flue/agents/**/*.ts", "flue.config.ts"],
+			"project": [".flue/**/*.ts"],
+			"ignoreDependencies": ["agents"]
+		},
+		"examples/cloudflare": {
+			"entry": [".flue/app.ts", ".flue/agents/**/*.ts"],
+			"project": [".flue/**/*.ts"],
+			"ignoreDependencies": ["agents"]
+		},
+		"examples/assistant": {
+			"entry": [".flue/agents/**/*.ts"],
+			"project": [".flue/**/*.ts"],
+			"ignoreDependencies": ["agents"]
+		},
+		"apps/www": {
+			"entry": ["src/code-snippets.ts"],
+			"ignoreDependencies": ["wrangler"]
+		}
+	}
+}
