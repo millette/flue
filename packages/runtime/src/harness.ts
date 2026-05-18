@@ -17,6 +17,7 @@ import type {
 	SessionToolFactory,
 	ShellOptions,
 	ShellResult,
+	SkillDefinition,
 	ToolDef,
 } from './types.ts';
 
@@ -131,11 +132,15 @@ export class Harness implements FlueHarness {
 			? createCwdSessionEnv(options.parentEnv, options.parentEnv.resolvePath(options.cwd))
 			: options.parentEnv;
 		const taskAgent = options.agent;
+		const taskSkills = taskAgent ? mergeTaskSkills(taskAgent.skills ?? [], this.config.sandboxSkills) : undefined;
 		const taskConfig: AgentConfig = taskAgent
 			? {
 					...this.config,
-					systemPrompt: composeAgentSystemPrompt(taskAgent),
-					skills: Object.fromEntries((taskAgent.skills ?? []).map((skill) => [skill.name, skill])),
+					systemPrompt: composeAgentSystemPrompt(taskAgent, {
+						context: this.config.workspaceContext,
+						skills: Object.values(taskSkills ?? {}),
+					}),
+					skills: taskSkills ?? {},
 					subagents: Object.fromEntries((taskAgent.subagents ?? []).map((agent) => [agent.name, agent])),
 					model: taskAgent.model ? this.config.resolveModel(taskAgent.model) : this.config.model,
 				}
@@ -186,6 +191,20 @@ export class Harness implements FlueHarness {
 				}
 			: undefined;
 	}
+}
+
+function mergeTaskSkills(
+	declared: readonly SkillDefinition[],
+	sandboxSkills: AgentConfig['sandboxSkills'],
+): AgentConfig['skills'] {
+	const skills = Object.fromEntries(declared.map((skill) => [skill.name, skill]));
+	for (const skill of Object.values(sandboxSkills)) {
+		if (skills[skill.name]) {
+			throw new Error(`[flue] Skill name "${skill.name}" appears on a task agent and in sandbox discovery.`);
+		}
+		skills[skill.name] = skill;
+	}
+	return skills;
 }
 
 function normalizeSessionName(name: string | undefined): string {

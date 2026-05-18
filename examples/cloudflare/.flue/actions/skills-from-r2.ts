@@ -3,7 +3,7 @@ import type { ActionContext } from '@flue/runtime';
 export const triggers = {};
 
 export default async function (_ctx: ActionContext) {
-	throw new Error('[flue] This example returns in Phase 3 with init({ loadFromSandbox: true }).');
+	throw new Error('[flue] This Cloudflare discovery demo is still pending; see hello-world/load-from-sandbox for the supported loadFromSandbox pattern.');
 }
 
 

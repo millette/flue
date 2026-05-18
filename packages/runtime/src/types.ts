@@ -14,13 +14,26 @@ export type PromptImage = ImageContent;
 
 // ─── Agent Resources ────────────────────────────────────────────────────────
 
-export type SkillSource = { kind: 'local'; path: string };
+export type SkillSource =
+	| { kind: 'local'; path: string }
+	| { kind: 'sandbox'; cwd: string; relativePath: string };
 
-export interface SkillResources {
-	scripts?: Record<string, string>;
-	references?: Record<string, string>;
-	assets?: Record<string, string>;
+export interface SkillResourceEntry {
+	path: string;
 }
+
+export type SkillResources =
+	| {
+			kind: 'lazy-local';
+			entries: SkillResourceEntry[];
+			contents: Record<string, string>;
+		}
+	| {
+			kind: 'lazy-sandbox';
+			cwd: string;
+			root: string;
+			entries: SkillResourceEntry[];
+		};
 
 export interface SkillDefinition {
 	name: string;
@@ -30,6 +43,7 @@ export interface SkillDefinition {
 	license?: string;
 	compatibility?: string;
 	metadata?: Record<string, string>;
+	allowedTools?: string[];
 	source: SkillSource;
 }
 
@@ -239,7 +253,10 @@ export interface ProviderSettings {
 
 export interface AgentConfig {
 	systemPrompt: string;
+	workspaceContext?: string;
 	skills: Record<string, SkillDefinition>;
+	sandboxSkills: Record<string, SkillDefinition>;
+	sandboxSkillDiscoveryHint: boolean;
 	subagents: Record<string, AgentDefinition>;
 	/** Agent-wide default model. Undefined only when no invocation-level or agent model exists. */
 	model: Model<any> | undefined;
@@ -320,6 +337,9 @@ export interface AgentInit {
 
 	/** Working directory for context discovery, tools, and shell calls. Defaults to the sandbox cwd. */
 	cwd?: string;
+
+	context?: string;
+	loadFromSandbox?: boolean | { skills?: string; context?: string };
 
 	/**
 	 * - Omitted / `undefined` / `false`: default in-memory sandbox. No

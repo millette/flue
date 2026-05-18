@@ -1,6 +1,6 @@
 import type { AgentTool, AgentToolResult } from '@earendil-works/pi-agent-core';
 import { type Static, Type } from '@earendil-works/pi-ai';
-import type { AgentDefinition, SessionEnv } from './types.ts';
+import type { AgentDefinition, SessionEnv, SkillDefinition } from './types.ts';
 
 const MAX_READ_LINES = 2000;
 const MAX_READ_BYTES = 50 * 1024;
@@ -16,6 +16,7 @@ export const BUILTIN_TOOL_NAMES = new Set([
 	'bash',
 	'grep',
 	'glob',
+	'read_skill_resource',
 	'task',
 ]);
 
@@ -40,6 +41,7 @@ export interface CreateToolsOptions {
 		signal?: AbortSignal,
 	) => Promise<AgentToolResult<TaskToolResultDetails>>;
 	subagents?: Record<string, AgentDefinition>;
+	skills?: Record<string, SkillDefinition>;
 }
 
 export function createTools(env: SessionEnv, options?: CreateToolsOptions): AgentTool<any>[] {
@@ -51,12 +53,21 @@ export function createTools(env: SessionEnv, options?: CreateToolsOptions): Agen
 		createGrepTool(env),
 		createGlobTool(env),
 	];
+	const skills = options?.skills ?? {};
+	if (Object.values(skills).some((skill) => skill.resources)) tools.push(createSkillResourceTool(env, skills));
 	if (options?.task) tools.push(createTaskTool(options.task, options.subagents ?? {}));
 	return tools;
 }
 
 const ReadParams = Type.Object({
 	path: Type.String({ description: 'Path to the file to read' }),
+	offset: Type.Optional(Type.Number({ description: 'Line number to start from (1-indexed)' })),
+	limit: Type.Optional(Type.Number({ description: 'Maximum number of lines to read' })),
+});
+
+const SkillResourceParams = Type.Object({
+	skill: Type.String({ description: 'Skill name that owns the resource.' }),
+	path: Type.String({ description: 'Relative resource path, such as references/REFERENCE.md.' }),
 	offset: Type.Optional(Type.Number({ description: 'Line number to start from (1-indexed)' })),
 	limit: Type.Optional(Type.Number({ description: 'Maximum number of lines to read' })),
 });
@@ -112,6 +123,47 @@ function createReadTool(env: SessionEnv): AgentTool<typeof ReadParams> {
 			return {
 				content: [{ type: 'text', text: output }],
 				details: { path: params.path, lines: allLines.length },
+			};
+		},
+	};
+}
+
+export function createSkillResourceTool(
+	env: SessionEnv,
+	skills: Record<string, SkillDefinition>,
+): AgentTool<typeof SkillResourceParams> {
+	return {
+		name: 'read_skill_resource',
+		label: 'Read Skill Resource',
+		description:
+			'Read a supporting file referenced by an active skill. Pass the skill name and a relative path that starts with scripts/, references/, or assets/. Use this only when the skill instructions need that file.',
+		parameters: SkillResourceParams,
+		async execute(_toolCallId: string, params: Static<typeof SkillResourceParams>, signal?: AbortSignal) {
+			throwIfAborted(signal);
+			const skill = skills[params.skill];
+			if (!skill?.resources) throw new Error(`Skill "${params.skill}" has no readable resources.`);
+			const relativePath = normalizeSkillResourcePath(params.path);
+			let content: string;
+			if (skill.resources.kind === 'lazy-local') {
+				content = skill.resources.contents[relativePath] ?? '';
+				if (!Object.hasOwn(skill.resources.contents, relativePath)) {
+					throw new Error(`Skill "${params.skill}" has no resource at "${relativePath}".`);
+				}
+			} else {
+				const resourcePath = skill.resources.root.endsWith('/')
+					? skill.resources.root + relativePath
+					: `${skill.resources.root}/${relativePath}`;
+				if (!(await env.exists(resourcePath))) {
+					throw new Error(`Skill "${params.skill}" has no resource at "${relativePath}".`);
+				}
+				content = relativePath.startsWith('assets/')
+					? encodeBase64(await env.readFileBuffer(resourcePath))
+					: await env.readFile(resourcePath);
+			}
+			const formatted = formatResourceRead(content, params.offset, params.limit);
+			return {
+				content: [{ type: 'text', text: formatted.text }],
+				details: { skill: params.skill, path: relativePath, lines: formatted.lines },
 			};
 		},
 	};
@@ -448,6 +500,52 @@ function createGlobTool(env: SessionEnv): AgentTool<typeof GlobParams> {
 
 function throwIfAborted(signal?: AbortSignal): void {
 	if (signal?.aborted) throw new Error('Operation aborted');
+}
+
+function normalizeSkillResourcePath(path: string): string {
+	const normalized = path.replace(/\\/g, '/').replace(/^\.\//, '');
+	const segments = normalized.split('/').filter(Boolean);
+	if (
+		segments.length < 2 ||
+		!['scripts', 'references', 'assets'].includes(segments[0] ?? '') ||
+		segments.some((segment) => segment === '.' || segment === '..') ||
+		path.startsWith('/')
+	) {
+		throw new Error('Skill resource paths must stay under scripts/, references/, or assets/.');
+	}
+	return segments.join('/');
+}
+
+function formatResourceRead(
+	content: string,
+	offset: number | undefined,
+	limit: number | undefined,
+): { text: string; lines: number } {
+	if (offset !== undefined && (!Number.isInteger(offset) || offset < 1)) {
+		throw new Error('Skill resource offset must be a positive integer.');
+	}
+	if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) {
+		throw new Error('Skill resource limit must be a positive integer.');
+	}
+	const allLines = content.split('\n');
+	const startLine = offset ? Math.max(0, offset - 1) : 0;
+	if (startLine >= allLines.length) {
+		throw new Error(`Offset ${offset} is beyond end of file (${allLines.length} lines total)`);
+	}
+	const endLine = limit ? startLine + limit : allLines.length;
+	const { text, wasTruncated } = truncateHead(allLines.slice(startLine, endLine), MAX_READ_LINES, MAX_READ_BYTES);
+	if (!wasTruncated) return { text, lines: allLines.length };
+	const shownEnd = startLine + text.split('\n').length;
+	return {
+		text: `${text}\n\n[Showing lines ${startLine + 1}-${shownEnd} of ${allLines.length}. Use offset=${shownEnd + 1} to continue.]`,
+		lines: allLines.length,
+	};
+}
+
+function encodeBase64(bytes: Uint8Array): string {
+	let binary = '';
+	for (const byte of bytes) binary += String.fromCharCode(byte);
+	return btoa(binary);
 }
 
 function countOccurrences(str: string, substr: string): number {

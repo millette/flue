@@ -42,29 +42,12 @@ export function buildSkillByNamePrompt(
 		'</skill_instructions>',
 	];
 
-	if (args && Object.keys(args).length > 0) {
-		parts.push('', 'Arguments:', JSON.stringify(args, null, 2));
+	if (skill.resources) {
+		parts.push(
+			'',
+			'Supporting skill resources stay lazy. Use `read_skill_resource` with this skill name and a relative `scripts/`, `references/`, or `assets/` path only when the skill instructions require one.',
+		);
 	}
-
-	if (schema) {
-		parts.push(buildResultFooter());
-	}
-
-	return parts.join('\n');
-}
-
-// Phase 3: used by sandbox-loaded path skill activation if that escape hatch remains.
-export function buildSkillByPathPrompt(
-	relPath: string,
-	resolvedPath: string,
-	args?: Record<string, unknown>,
-	schema?: v.GenericSchema,
-): string {
-	const parts: string[] = [
-		`Run the skill file \`${relPath}\`.`,
-		'',
-		`The file can be found at ${resolvedPath}.`,
-	];
 
 	if (args && Object.keys(args).length > 0) {
 		parts.push('', 'Arguments:', JSON.stringify(args, null, 2));

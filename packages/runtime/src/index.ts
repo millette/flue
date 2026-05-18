@@ -35,6 +35,7 @@ export type {
 	Skill,
 	SkillDefinition,
 	SkillResources,
+	SkillResourceEntry,
 	SkillSource,
 	AgentConfig,
 	ModelConfig,

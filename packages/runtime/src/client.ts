@@ -1,4 +1,11 @@
-import { composeAgentSystemPrompt } from './context.ts';
+import {
+	composeAgentSystemPrompt,
+	discoverSandboxSkills,
+	joinWorkspaceContext,
+	readAgentsMd,
+	readSandboxContextFile,
+	skillsDirIn,
+} from './context.ts';
 import { normalizeAgentDefinition } from './definition.ts';
 import { Harness } from './harness.ts';
 import { dispatchGlobalEvent } from './runtime/events.ts';
@@ -14,6 +21,7 @@ import type {
 	SandboxFactory,
 	SessionEnv,
 	SessionStore,
+	SkillDefinition,
 	SessionToolFactory,
 } from './types.ts';
 
@@ -141,18 +149,35 @@ export function createFlueContext(config: FlueContextConfig): FlueContextInterna
 					? createCwdSessionEnv(baseEnv, baseEnv.resolvePath(options.cwd))
 					: baseEnv;
 				const store: SessionStore = options.persist ?? config.defaultStore;
-				const skills = Object.fromEntries((normalizedAgent.skills ?? []).map((skill) => [skill.name, skill]));
+				const sandboxDiscovery = await loadSandboxDiscovery(env, options.loadFromSandbox);
+				const workspaceContext = joinWorkspaceContext(sandboxDiscovery.context, options.context);
+				const effectiveSkills = mergeDiscoveredSkills(normalizedAgent.skills ?? [], sandboxDiscovery.skills);
+				const skills = Object.fromEntries(effectiveSkills.map((skill) => [skill.name, skill]));
+				const sandboxSkills = Object.fromEntries(sandboxDiscovery.skills.map((skill) => [skill.name, skill]));
 				const subagents = Object.fromEntries(
 					(normalizedAgent.subagents ?? []).map((agent) => [agent.name, agent]),
 				);
 				const agentModel = config.agentConfig.resolveModel(
 					options.model === false ? false : (options.model ?? normalizedAgent.model),
 				);
+				const sandboxAttached = sandbox !== undefined && sandbox !== false;
+				const sandboxSkillDiscoveryHint = sandboxAttached && sandboxDiscovery.skillsEnabled === false;
+				if (sandboxAttached && sandboxDiscovery.skillsEnabled === false) {
+					const conventionalSkills = skillsDirIn(env.cwd);
+					if (await env.exists(conventionalSkills)) {
+						ctx.log.warn(
+							`[flue] Found sandbox skills at ${conventionalSkills}, but init() did not enable loadFromSandbox. Pass loadFromSandbox: true to discover them.`,
+						);
+					}
+				}
 
 				const agentConfig: AgentConfig = {
 					...config.agentConfig,
-					systemPrompt: composeAgentSystemPrompt(normalizedAgent),
+					systemPrompt: composeAgentSystemPrompt(normalizedAgent, { context: workspaceContext, skills: effectiveSkills }),
+					workspaceContext,
 					skills,
+					sandboxSkills,
+					sandboxSkillDiscoveryHint,
 					subagents,
 					model: agentModel,
 					thinkingLevel: options.thinkingLevel ?? config.agentConfig.thinkingLevel,
@@ -213,6 +238,57 @@ function serializeLogError(error: Error): Record<string, unknown> {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+async function loadSandboxDiscovery(
+	env: SessionEnv,
+	option: AgentInit['loadFromSandbox'],
+): Promise<{ context: string; skills: SkillDefinition[]; skillsEnabled: boolean }> {
+	if (option === true) {
+		return {
+			context: await readAgentsMd(env, env.cwd),
+			skills: await discoverSandboxSkills(env, skillsDirIn(env.cwd)),
+			skillsEnabled: true,
+		};
+	}
+	if (!option || typeof option !== 'object') return { context: '', skills: [], skillsEnabled: false };
+	if (option.context !== undefined && (typeof option.context !== 'string' || option.context.trim().length === 0)) {
+		throw new Error('[flue] loadFromSandbox.context must be a non-empty path string.');
+	}
+	if (option.skills !== undefined && (typeof option.skills !== 'string' || option.skills.trim().length === 0)) {
+		throw new Error('[flue] loadFromSandbox.skills must be a non-empty path string.');
+	}
+	return {
+		context: option.context ? await readSandboxContextFile(env, option.context) : '',
+		skills: option.skills ? await discoverSandboxSkills(env, option.skills) : [],
+		skillsEnabled: option.skills !== undefined,
+	};
+}
+
+function mergeDiscoveredSkills(
+	declared: readonly SkillDefinition[],
+	discovered: readonly SkillDefinition[],
+): SkillDefinition[] {
+	const merged = [...declared];
+	const seen = new Map(declared.map((skill) => [skill.name, skill]));
+	for (const skill of discovered) {
+		const previous = seen.get(skill.name);
+		if (previous) {
+			throw new Error(
+				`[flue] Skill name "${skill.name}" appears in init() configuration and sandbox discovery. ` +
+					`Configured source: ${formatSkillSource(previous)}. Sandbox source: ${formatSkillSource(skill)}.`,
+			);
+		}
+		seen.set(skill.name, skill);
+		merged.push(skill);
+	}
+	return merged;
+}
+
+function formatSkillSource(skill: SkillDefinition): string {
+	return skill.source.kind === 'sandbox'
+		? `${skill.source.cwd}/${skill.source.relativePath}`
+		: skill.source.path;
+}
 
 function isBashFactory(value: unknown): value is BashFactory {
 	return typeof value === 'function';

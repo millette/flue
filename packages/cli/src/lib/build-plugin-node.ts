@@ -112,7 +112,7 @@ function createContextForRequest(id, runId, payload, req) {
     env: process.env,
     req,
     agentConfig: {
-      systemPrompt, skills, subagents, model: undefined, resolveModel,
+      systemPrompt, skills, sandboxSkills: {}, sandboxSkillDiscoveryHint: false, subagents, model: undefined, resolveModel,
     },
     createDefaultEnv,
     defaultStore,

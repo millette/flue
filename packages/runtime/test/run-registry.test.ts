@@ -261,6 +261,8 @@ describe('Bare /runs/:runId routes via flue()', () => {
 					agentConfig: {
 						systemPrompt: '',
 						skills: {},
+						sandboxSkills: {},
+						sandboxSkillDiscoveryHint: false,
 						subagents: {},
 						model: undefined,
 						resolveModel: () => undefined,
@@ -372,6 +374,8 @@ describe('Bare /runs/:runId routes via flue()', () => {
 					agentConfig: {
 						systemPrompt: '',
 						skills: {},
+						sandboxSkills: {},
+						sandboxSkillDiscoveryHint: false,
 						subagents: {},
 						model: undefined,
 						resolveModel: () => undefined,
@@ -457,6 +461,8 @@ describe('Bare /runs/:runId routes via flue()', () => {
 					agentConfig: {
 						systemPrompt: '',
 						skills: {},
+						sandboxSkills: {},
+						sandboxSkillDiscoveryHint: false,
 						subagents: {},
 						model: undefined,
 						resolveModel: () => undefined,
@@ -546,6 +552,8 @@ describe('admin() routes', () => {
 					agentConfig: {
 						systemPrompt: '',
 						skills: {},
+						sandboxSkills: {},
+						sandboxSkillDiscoveryHint: false,
 						subagents: {},
 						model: undefined,
 						resolveModel: () => undefined,

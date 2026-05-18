@@ -12,6 +12,7 @@ import type {
 import type * as v from 'valibot';
 import { abortErrorFor, createCallHandle } from './abort.ts';
 import {
+	createSkillResourceTool,
 	createTaskTool,
 	createTools,
 	formatBashResult,
@@ -787,7 +788,7 @@ export class Session implements FlueSession {
 	private resolveTaskAgent(agent: AgentDefinition): AgentDefinition {
 		if (this.taskDepth === 0) return agent;
 		const declared = agent.name ? this.config.subagents[agent.name] : undefined;
-		if (declared === agent || declared) return declared;
+		if (declared) return declared;
 		const available = Object.keys(this.config.subagents).join(', ') || '(none)';
 		throw new Error(
 			`[flue] Task agent "${agent.name}" is not declared on this parent agent. ` +
@@ -798,17 +799,23 @@ export class Session implements FlueSession {
 	private resolveSkill(skill: SkillDefinition | string): SkillDefinition {
 		if (typeof skill !== 'string') {
 			const registered = this.config.skills[skill.name];
-			if (registered !== skill && !registered) {
+			if (!registered) {
 				throw new Error(`[flue] Skill "${skill.name}" is not registered on this agent.`);
 			}
-			return registered ?? skill;
+			if (registered !== skill) {
+				throw new Error(`[flue] Skill "${skill.name}" does not match the value registered on this agent.`);
+			}
+			return registered;
 		}
 		const registered = this.config.skills[skill];
 		if (registered) return registered;
 		const available = Object.keys(this.config.skills).join(', ') || '(none)';
+		const sandboxHint = this.config.sandboxSkillDiscoveryHint
+			? ' If this skill exists in the sandbox, pass loadFromSandbox: true to init().'
+			: '';
 		throw new Error(
 			`[flue] Skill "${skill}" not registered. Available: ${available}. ` +
-				'Import the SKILL.md value into defineAgent({ skills: [...] }).',
+				`Import the SKILL.md value into defineAgent({ skills: [...] }).${sandboxHint}`,
 		);
 	}
 
@@ -845,6 +852,7 @@ export class Session implements FlueSession {
 	): void {
 		const reserved = new Set<string>(builtinTools.map((t) => t.name));
 		reserved.add('task');
+		reserved.add('read_skill_resource');
 		const names = new Set<string>();
 		for (const toolDef of tools) {
 			if (reserved.has(toolDef.name)) {
@@ -875,11 +883,15 @@ export class Session implements FlueSession {
 		if (this.toolFactory) {
 			const connectorTools = this.toolFactory(env, { subagents: this.config.subagents });
 			this.validateConnectorTools(connectorTools);
-			return [...connectorTools, createTaskTool(runTask, this.config.subagents)];
+			const resourceTool = Object.values(this.config.skills).some((skill) => skill.resources)
+				? [createSkillResourceTool(env, this.config.skills)]
+				: [];
+			return [...connectorTools, ...resourceTool, createTaskTool(runTask, this.config.subagents)];
 		}
 
 		return createTools(env, {
 			subagents: this.config.subagents,
+			skills: this.config.skills,
 			task: runTask,
 		});
 	}
@@ -888,10 +900,9 @@ export class Session implements FlueSession {
 	private validateConnectorTools(tools: AgentTool<any>[]): void {
 		const names = new Set<string>();
 		for (const tool of tools) {
-			if (tool.name === 'task') {
+			if (tool.name === 'task' || tool.name === 'read_skill_resource') {
 				throw new Error(
-					'[flue] Sandbox connector tools() returned a tool named "task", which is ' +
-						'framework-reserved. The framework appends `task` automatically; remove it from the connector.',
+					`[flue] Sandbox connector tools() returned a tool named "${tool.name}", which is framework-reserved. The framework appends "${tool.name}" automatically; remove it from the connector.`,
 				);
 			}
 			if (names.has(tool.name)) {
