@@ -4,6 +4,18 @@
 
 ### New Features
 
+- **Cloudflare shell sandbox connector.** `flue add cloudflare-shell` now installs the `getShellSandbox({ workspace, loader })`, `getDefaultWorkspace()`, and `hydrateFromBucket()` connector file. The connector wires `@cloudflare/shell` Workspaces into Flue through a codemode `code` tool backed by a Worker Loader binding.
+- **Local host sandbox connector.** `flue add local` now installs the host-bound `local()` sandbox factory for Node targets, including the explicit env allowlist behavior that keeps host secrets out of shell commands unless the agent author opts in.
+
+### Breaking Changes
+
+- **Sandbox factories moved out of `@flue/runtime`.** Replace `import { local } from '@flue/runtime/node'` with a project-local connector installed by `flue add local`. Replace `getShellSandbox`, `getDefaultWorkspace`, and `hydrateFromBucket` imports from `@flue/runtime/cloudflare` with the connector installed by `flue add cloudflare-shell`.
+- **Built-in tool constructors are no longer root exports.** `createTools` and `BUILTIN_TOOL_NAMES` were internal runtime plumbing rather than supported authoring APIs, so they are no longer re-exported from `@flue/runtime`.
+
+## 0.7.0 - 2026-05-18
+
+### New Features
+
 - **Cloudflare shell sandbox.** Added `getShellSandbox({ workspace, loader })`, `getDefaultWorkspace()`, and `hydrateFromBucket()` from `@flue/runtime/cloudflare`. The new sandbox wires `@cloudflare/shell` Workspaces into Flue through a codemode `code` tool backed by a Worker Loader binding. Agents use `state.*` inside the `code` tool instead of bash/read/write/grep/glob. Use `@cloudflare/shell` directly for primitives like `Workspace`, `WorkspaceFileSystem`, and `createGit`.
 
 ### Breaking Changes

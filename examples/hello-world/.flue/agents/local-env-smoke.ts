@@ -1,5 +1,5 @@
 import type { FlueContext } from '@flue/runtime';
-import { local } from '@flue/runtime/node';
+import { local } from '../connectors/local.ts';
 
 export const triggers = { webhook: true };
 

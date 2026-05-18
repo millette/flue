@@ -30,7 +30,7 @@ import {
 	getDefaultWorkspace,
 	getShellSandbox,
 	hydrateFromBucket,
-} from '@flue/runtime/cloudflare';
+} from '../connectors/cloudflare-shell.ts';
 import * as v from 'valibot';
 
 export const triggers = { webhook: true };

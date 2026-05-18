@@ -18,10 +18,7 @@
 import type { FlueContext } from '@flue/runtime';
 import { WorkspaceFileSystem } from '@cloudflare/shell';
 import { createGit } from '@cloudflare/shell/git';
-import {
-	getDefaultWorkspace,
-	getShellSandbox,
-} from '@flue/runtime/cloudflare';
+import { getDefaultWorkspace, getShellSandbox } from '../connectors/cloudflare-shell.ts';
 
 export const triggers = { webhook: true };
 

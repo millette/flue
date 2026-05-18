@@ -27,10 +27,6 @@
 		"./cloudflare": {
 			"types": "./dist/cloudflare/index.d.mts",
 			"import": "./dist/cloudflare/index.mjs"
-		},
-		"./node": {
-			"types": "./dist/node/index.d.mts",
-			"import": "./dist/node/index.mjs"
 		}
 	},
 	"main": "./dist/index.mjs",
@@ -49,8 +45,6 @@
 		"prepublishOnly": "cp ../../README.md ."
 	},
 	"dependencies": {
-		"@cloudflare/codemode": "^0.3.4",
-		"@cloudflare/shell": "^0.3.2",
 		"@hono/node-server": "^1.14.0",
 		"@hono/standard-validator": "^0.2.0",
 		"@earendil-works/pi-agent-core": "*",

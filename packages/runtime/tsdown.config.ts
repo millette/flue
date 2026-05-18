@@ -8,7 +8,6 @@ export default defineConfig({
 		'src/sandbox-compat.ts',
 		'src/internal.ts',
 		'src/cloudflare/index.ts',
-		'src/node/index.ts',
 	],
 	format: ['esm'],
 	dts: true,

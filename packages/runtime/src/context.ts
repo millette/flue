@@ -184,7 +184,11 @@ export function composeSystemPrompt(
 	return parts.join('\n');
 }
 
-/** Discover AGENTS.md, local skills, and directory listing from the session's cwd. */
+/**
+ * Discover AGENTS.md, local skills, and directory listing from the session's cwd.
+ * Phase 3 moves sandbox-backed AGENTS.md and skill discovery behind
+ * `init({ loadFromSandbox })`; keep this call site explicit until then.
+ */
 export async function discoverSessionContext(
 	env: SessionEnv,
 ): Promise<{ systemPrompt: string; skills: Record<string, Skill> }> {

@@ -250,8 +250,8 @@ async function resolveSessionEnv(
 	if ((sandbox as unknown) === 'local') {
 		throw new Error(
 			"[flue] `sandbox: 'local'` is no longer supported. " +
-				"Use the `local()` factory instead: " +
-				"`import { local } from '@flue/runtime/node'; init({ sandbox: local() })`. " +
+				'Install the local connector with `flue add local`, then pass its `local()` factory: ' +
+				"`import { local } from '../connectors/local'; init({ sandbox: local() })`. " +
 				"The factory accepts an `env` option for opting host env vars into the sandbox.",
 		);
 	}

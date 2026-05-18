@@ -33,7 +33,7 @@ import {
   getDefaultWorkspace,
   getShellSandbox,
   hydrateFromBucket,
-} from '@flue/runtime/cloudflare';
+} from '../connectors/cloudflare-shell';
 
 // POST /agents/support/:id
 export const triggers = { webhook: true };

@@ -1,4 +1,3 @@
-/** Cloudflare Workspace sandbox backed by @cloudflare/shell. */
 import {
 	STATE_TYPES,
 	Workspace,
@@ -14,27 +13,63 @@ import {
 } from '@cloudflare/codemode';
 import type { AgentTool, AgentToolResult } from '@earendil-works/pi-agent-core';
 import { type Static, Type } from '@earendil-works/pi-ai';
-import { normalizePath } from '../session.ts';
+import { getCloudflareContext } from '@flue/runtime/cloudflare';
 import type {
 	FileStat,
 	SandboxFactory,
 	SessionEnv,
 	SessionToolFactory,
 	ShellResult,
-} from '../types.ts';
-import { getCloudflareContext } from './context.ts';
+} from '@flue/runtime';
 
 export interface GetShellSandboxOptions {
 	workspace: Workspace;
 	loader: WorkerLoader;
-	/** Forwarded to codemode's DynamicWorkerExecutor. */
 	executor?: Pick<DynamicWorkerExecutorOptions, 'timeout' | 'globalOutbound' | 'modules'>;
 }
 
-/**
- * Create a Workspace-backed sandbox with the codemode `code` tool.
- * Requires a Worker Loader binding; cf-shell sandboxes do not support `exec()`.
- */
+export interface HydrateFromBucketOptions {
+	prefix?: string;
+}
+
+export async function hydrateFromBucket(
+	workspace: Workspace,
+	bucket: R2Bucket,
+	options?: HydrateFromBucketOptions,
+): Promise<void> {
+	const prefix = options?.prefix;
+	let cursor: string | undefined;
+
+	while (true) {
+		const listing = await bucket.list({ prefix, cursor });
+		for (const obj of listing.objects) {
+			const relativeKey = stripPrefix(obj.key, prefix);
+			if (relativeKey === '' || relativeKey.endsWith('/')) continue;
+			const body = await bucket.get(obj.key);
+			if (!body) continue;
+			await workspace.writeFileBytes(
+				absolutize(relativeKey),
+				new Uint8Array(await body.arrayBuffer()),
+			);
+		}
+
+		if (!listing.truncated) break;
+		if (!listing.cursor) {
+			throw new Error('[flue] R2 listing was truncated but did not include a cursor.');
+		}
+		cursor = listing.cursor;
+	}
+}
+
+function stripPrefix(key: string, prefix: string | undefined): string {
+	if (!prefix) return key;
+	return key.startsWith(prefix) ? key.slice(prefix.length) : key;
+}
+
+function absolutize(key: string): string {
+	return key.startsWith('/') ? key : '/' + key;
+}
+
 export function getShellSandbox(options: GetShellSandboxOptions): SandboxFactory {
 	if (!options || !options.workspace) {
 		throw new Error(
@@ -68,6 +103,17 @@ export function getShellSandbox(options: GetShellSandboxOptions): SandboxFactory
 	};
 }
 
+function normalizePath(p: string): string {
+	const parts = p.split('/');
+	const result: string[] = [];
+	for (const part of parts) {
+		if (part === '.' || part === '') continue;
+		if (part === '..') result.pop();
+		else result.push(part);
+	}
+	return '/' + result.join('/');
+}
+
 function createWorkspaceSessionEnv(
 	workspace: Workspace,
 	fs: WorkspaceFileSystem,
@@ -79,7 +125,6 @@ function createWorkspaceSessionEnv(
 		if (normalizedCwd === '/') return normalizePath('/' + p);
 		return normalizePath(normalizedCwd + '/' + p);
 	};
-
 	const exec = (): Promise<ShellResult> => {
 		throw new Error(EXEC_NOT_SUPPORTED_MESSAGE);
 	};
@@ -94,11 +139,8 @@ function createWorkspaceSessionEnv(
 		},
 		async writeFile(path: string, content: string | Uint8Array): Promise<void> {
 			const resolved = resolvePath(path);
-			if (typeof content === 'string') {
-				await workspace.writeFile(resolved, content);
-			} else {
-				await workspace.writeFileBytes(resolved, content);
-			}
+			if (typeof content === 'string') await workspace.writeFile(resolved, content);
+			else await workspace.writeFileBytes(resolved, content);
 		},
 		async stat(path: string): Promise<FileStat> {
 			return adaptStat(await fs.stat(resolvePath(path)));
@@ -161,15 +203,12 @@ function createCodeTool(
 			params: Static<typeof CodeParams>,
 		): Promise<AgentToolResult<{ logs?: string[]; error?: string }>> {
 			const { result, error, logs } = await executor.execute(params.code, [stateProvider]);
-
 			if (error) {
 				const logsTail = logs && logs.length ? `\n\nlogs:\n${logs.join('\n')}` : '';
 				throw new Error(`code tool failed: ${error}${logsTail}`);
 			}
-
 			const resultText = formatResult(result);
 			const logsText = logs && logs.length ? `\n\n--- logs ---\n${logs.join('\n')}` : '';
-
 			return {
 				content: [{ type: 'text', text: resultText + logsText }],
 				details: logs && logs.length ? { logs } : {},
@@ -215,10 +254,6 @@ function buildCodeToolDescription(): string {
 	].join('\n');
 }
 
-/**
- * Construct the default Workspace for the current Cloudflare agent instance.
- * Repeated calls return handles to the same default Workspace namespace.
- */
 export function getDefaultWorkspace(): Workspace {
 	const { storage } = getCloudflareContext();
 	return new Workspace({ sql: storage.sql });

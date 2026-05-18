@@ -177,7 +177,7 @@ The agent can use its built-in tools — grep, glob, read — to search and read
 
 Inline files work for small, static content. But for larger datasets — a knowledge base, documentation corpus, product catalog — you want persistent storage. On Cloudflare, the lightweight non-container path is [`@cloudflare/shell`](./cloudflare-shell.md): a durable SQLite-indexed `Workspace` plus a `code` tool that runs JavaScript against `state.*` in an isolated Worker.
 
-R2 is a good source for that workspace, but it is not a live filesystem mount. Hydrate the R2 objects you want into the Workspace before `init()`, then the agent operates on the Workspace. The basic R2 flow below uses Flue's Cloudflare helpers; install `@cloudflare/shell` directly if you want to construct custom Workspaces or hydrate from git.
+R2 is a good source for that workspace, but it is not a live filesystem mount. Hydrate the R2 objects you want into the Workspace before `init()`, then the agent operates on the Workspace. Install the workspace sandbox with `flue add cloudflare-shell`; the connector file includes the `hydrateFromBucket()` helper used below. Install `@cloudflare/shell` directly if you want to construct custom Workspaces or hydrate from git.
 
 ### The support agent pattern
 
@@ -191,7 +191,7 @@ import {
   getDefaultWorkspace,
   getShellSandbox,
   hydrateFromBucket,
-} from '@flue/runtime/cloudflare';
+} from '../connectors/cloudflare-shell';
 
 export const triggers = { webhook: true };
 

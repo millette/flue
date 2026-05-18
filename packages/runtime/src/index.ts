@@ -38,7 +38,6 @@ export type {
 } from './types.ts';
 
 export { Type } from '@earendil-works/pi-ai';
-export { createTools, BUILTIN_TOOL_NAMES } from './agent.ts';
 export type { McpServerConnection, McpServerOptions, McpTransport } from './mcp.ts';
 export { connectMcpServer } from './mcp.ts';
 export { ResultUnavailableError } from './result.ts';

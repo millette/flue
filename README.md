@@ -67,7 +67,7 @@ import {
   getDefaultWorkspace,
   getShellSandbox,
   hydrateFromBucket,
-} from '@flue/runtime/cloudflare';
+} from '../connectors/cloudflare-shell';
 import * as v from 'valibot';
 
 export const triggers = { webhook: true };
@@ -109,7 +109,7 @@ A triage agent that runs in CI whenever an issue is opened on GitHub. The `local
 ```ts
 // .flue/agents/triage.ts
 import { type FlueContext } from '@flue/runtime';
-import { local } from '@flue/runtime/node';
+import { local } from '../connectors/local';
 import * as v from 'valibot';
 
 // Because we are running this in CI, we don't need to expose this as an HTTP endpoint.

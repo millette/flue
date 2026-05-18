@@ -86,9 +86,18 @@ importers:
 
   examples/cloudflare:
     dependencies:
+      '@cloudflare/codemode':
+        specifier: ^0.3.4
+        version: 0.3.4(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(ai@6.0.175(zod@4.4.3))(zod@4.4.3)
       '@cloudflare/shell':
         specifier: ^0.3.2
         version: 0.3.6(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(ai@6.0.175(zod@4.4.3))(zod@4.4.3)
+      '@earendil-works/pi-agent-core':
+        specifier: '*'
+        version: 0.74.0(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(ws@8.20.0)(zod@4.4.3)
+      '@earendil-works/pi-ai':
+        specifier: '*'
+        version: 0.74.0(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(ws@8.20.0)(zod@4.4.3)
       '@flue/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
@@ -188,12 +197,6 @@ importers:
 
   packages/runtime:
     dependencies:
-      '@cloudflare/codemode':
-        specifier: ^0.3.4
-        version: 0.3.4(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(ai@6.0.175(zod@4.4.3))(zod@4.4.3)
-      '@cloudflare/shell':
-        specifier: ^0.3.2
-        version: 0.3.6(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(ai@6.0.175(zod@4.4.3))(zod@4.4.3)
       '@earendil-works/pi-agent-core':
         specifier: '*'
         version: 0.74.0(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(ws@8.20.0)(zod@4.4.3)

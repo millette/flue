@@ -327,9 +327,9 @@ export interface AgentInit {
 	/**
 	 * - Omitted / `undefined` / `false`: default in-memory sandbox. No
 	 *   files, no host access.
-	 * - `SandboxFactory`: Connector-wrapped sandbox. Use `local()` from
-	 *   `@flue/runtime/node` for the host-bound Node sandbox, or any
-	 *   remote connector (Daytona, E2B, Cloudflare Containers, etc.).
+	 * - `SandboxFactory`: Connector-wrapped sandbox. Use `flue add local`
+	 *   for the host-bound Node connector, or install any remote connector
+	 *   (Daytona, E2B, Cloudflare Containers, etc.).
 	 * - `BashFactory`: User-configured just-bash factory. Called once to construct the runtime.
 	 */
 	sandbox?: false | SandboxFactory | BashFactory;
