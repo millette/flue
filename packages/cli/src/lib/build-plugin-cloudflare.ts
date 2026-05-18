@@ -50,25 +50,25 @@ export class CloudflarePlugin implements BuildPlugin {
 		const { actions, appEntry } = ctx;
 		const manifestJson = JSON.stringify(ctx.manifest);
 		const runtimeVersion = JSON.stringify(ctx.runtimeVersion);
-		validateCloudflareAgentNames(ctx);
+		validateCloudflareActionNames(ctx);
 
-		const webhookAgents = actions.filter((a) => a.triggers.webhook);
+		const webhookActions = actions.filter((a) => a.triggers.webhook);
 
-		const agentImports = actions
+		const actionImports = actions
 			.map((a, index) => {
-				const varName = agentVarName(a.name, index);
+				const varName = actionVarName(a.name, index);
 				const filePath = a.filePath.replace(/\\/g, '/');
 				return `import ${varName} from '${filePath}';`;
 			})
 			.join('\n');
 
-		const agentClasses = webhookAgents
+		const actionClasses = webhookActions
 			.map((a) => {
-				const className = agentClassName(a.name);
-				const handlerVar = agentVarName(a.name, actions.indexOf(a));
+				const className = actionClassName(a.name);
+				const handlerVar = actionVarName(a.name, actions.indexOf(a));
 				return `export class ${className} extends Agent {
   async onRequest(request) {
-    return dispatchAgent(request, this, ${JSON.stringify(a.name)}, ${handlerVar});
+    return dispatchAction(request, this, ${JSON.stringify(a.name)}, ${handlerVar});
   }
 
   async onFiberRecovered(ctx) {
@@ -121,7 +121,7 @@ import {
 } from '@flue/runtime/cloudflare';
 import { registerApiProvider, registerProvider } from '@flue/runtime/app';
 
-${agentImports}
+${actionImports}
 
 ${userAppImport}
 
@@ -147,7 +147,7 @@ const skills = {};
 const subagents = {};
 const systemPrompt = '';
 
-const webhookAgentNames = ${JSON.stringify(webhookAgents.map((a) => a.name))};
+const webhookActionNames = ${JSON.stringify(webhookActions.map((a) => a.name))};
 
 // ─── Sandbox Environments ───────────────────────────────────────────────────
 
@@ -265,18 +265,18 @@ function createRunRegistryForRequest(reqEnv) {
 }
 
 /**
- * Convert an agent name (URL segment, lower-kebab-case) back to its
+ * Convert an action name (URL segment, lower-kebab-case) back to its
  * Durable Object binding name (PascalCase). This MUST match the
- * build-time \`agentClassName\` helper byte-for-byte — its source is
+ * build-time \`actionClassName\` helper byte-for-byte — its source is
  * inlined directly below via .toString() so the two cannot drift.
- * Used by the main worker to resolve a runId-derived target agent
+ * Used by the main worker to resolve a runId-derived target action
  * back into a DO stub without keeping its own (name -> class) map.
  */
-const agentBindingNameFromAgentName = ${agentClassName.toString().replace(/agentClassName/g, 'agentBindingNameFromAgentName')};
+const actionBindingNameFromActionName = ${actionClassName.toString().replace(/actionClassName/g, 'actionBindingNameFromActionName')};
 
 function runWithInstanceContext(doInstance, fn) {
   return runWithCloudflareContext(
-    { env: doInstance.env, agentInstance: doInstance, storage: doInstance.ctx.storage },
+    { env: doInstance.env, actionInstance: doInstance, storage: doInstance.ctx.storage },
     fn,
   );
 }
@@ -291,20 +291,20 @@ function assertAgentsDurabilityApi(doInstance, method) {
 	}
 }
 
-async function handleFlueFiberRecovered(ctx, _doInstance, agentName) {
+async function handleFlueFiberRecovered(ctx, _doInstance, actionName) {
   if (!ctx.name || !ctx.name.startsWith('flue:')) return;
-  console.warn('[flue] Cloudflare fiber interrupted:', agentName, ctx.name, ctx.snapshot ?? null);
+  console.warn('[flue] Cloudflare fiber interrupted:', actionName, ctx.name, ctx.snapshot ?? null);
 }
 
 // ─── Per-DO Dispatch ───────────────────────────────────────────────────────
 
-async function dispatchAgent(request, doInstance, agentName, handler) {
+async function dispatchAction(request, doInstance, actionName, handler) {
   const id = doInstance.name; // DO room name set by routeAgentRequest
   const runRoute = parseRunRoute(request);
   if (runRoute) {
     return handleRunRouteRequest({
       request,
-      actionName: agentName,
+      actionName,
       id,
       runStore: createRunStoreForRequest(doInstance),
       runSubscribers,
@@ -314,7 +314,7 @@ async function dispatchAgent(request, doInstance, agentName, handler) {
 
   return handleAgentRequest({
     request,
-    actionName: agentName,
+    actionName,
     id,
     handler,
     runStore: createRunStoreForRequest(doInstance),
@@ -326,7 +326,7 @@ async function dispatchAgent(request, doInstance, agentName, handler) {
         fiber?.stash?.({
           version: 1,
           kind: 'webhook',
-          agentName,
+          actionName,
           id,
           runId,
           phase: 'running',
@@ -356,9 +356,9 @@ function parseRunRoute(request) {
   return null;
 }
 
-// ─── Per-Agent Durable Object Classes ──────────────────────────────────────
+// ─── Per-Action Durable Object Classes ─────────────────────────────────────
 
-${agentClasses}
+${actionClasses}
 
 export { FlueRegistry };
 
@@ -376,14 +376,14 @@ configureFlueRuntime({
   target: 'cloudflare',
   runtimeVersion: ${runtimeVersion},
   manifest: ${manifestJson},
-  webhookAgents: webhookAgentNames,
+  webhookAgents: webhookActionNames,
   // Cloudflare deploys never run in local mode — the trigger-less actions
   // simply have no DO class to land in.
   allowNonWebhook: false,
   routeAgentRequest: (request, env) => routeAgentRequest(request, env),
   createRunRegistryForRequest,
   routeRunRequest: async (request, reqEnv, target) => {
-    const bindingName = agentBindingNameFromAgentName(target.actionName);
+    const bindingName = actionBindingNameFromActionName(target.actionName);
     const binding = reqEnv?.[bindingName];
     if (!binding) return null;
     const stub = await getAgentByName(binding, target.instanceId);
@@ -422,17 +422,17 @@ export default {
 
 	async additionalOutputs(ctx: BuildContext): Promise<Record<string, string>> {
 		const outputs: Record<string, string> = {};
-		const webhookAgents = ctx.actions.filter((a) => a.triggers.webhook);
+		const webhookActions = ctx.actions.filter((a) => a.triggers.webhook);
 
-		// Per-agent DO bindings: one per webhook agent. Flue no longer forces a
+		// Per-action DO bindings: one per webhook action. Flue no longer forces a
 		// `Sandbox` binding, container entry, or Dockerfile — users who want
 		// container sandboxes declare those themselves in their own
 		// wrangler.jsonc (preserved via the merge below). Flue only automates
 		// the `export { Sandbox as ... }` re-export in the bundle (see
 		// generateEntryPoint).
-		const flueBindings = webhookAgents.map((a) => ({
-			class_name: agentClassName(a.name),
-			name: agentClassName(a.name),
+		const flueBindings = webhookActions.map((a) => ({
+			class_name: actionClassName(a.name),
+			name: actionClassName(a.name),
 		}));
 
 		const FLUE_REGISTRY_BINDING = { name: 'FLUE_REGISTRY', class_name: 'FlueRegistry' };
@@ -453,7 +453,7 @@ export default {
 		}
 		validateUserWranglerConfig(userConfig);
 
-		// Compute the migrations Flue wants to add for net-new agent classes.
+		// Compute the migrations Flue wants to add for net-new action classes.
 		// Cloudflare migration tags are immutable once deployed, so we emit
 		// one tag per class — that lets every redeploy be a no-op for already
 		// deployed classes and a single-tag append for the truly net-new ones.
@@ -520,39 +520,39 @@ export default {
 	}
 }
 
-function agentVarName(name: string, index: number): string {
-	const readableName = name.replace(/[^a-zA-Z0-9]/g, '_').replace(/^_+|_+$/g, '') || 'agent';
+function actionVarName(name: string, index: number): string {
+	const readableName = name.replace(/[^a-zA-Z0-9]/g, '_').replace(/^_+|_+$/g, '') || 'action';
 	return `handler_${readableName}_${index}`;
 }
 
-const CLOUDFLARE_AGENT_NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+const CLOUDFLARE_ACTION_NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
-function validateCloudflareAgentNames(ctx: BuildContext): void {
-	const invalidAgents = ctx.actions.filter((agent) => !CLOUDFLARE_AGENT_NAME_PATTERN.test(agent.name));
-	if (invalidAgents.length === 0) return;
+function validateCloudflareActionNames(ctx: BuildContext): void {
+	const invalidActions = ctx.actions.filter((action) => !CLOUDFLARE_ACTION_NAME_PATTERN.test(action.name));
+	if (invalidActions.length === 0) return;
 
-	const invalidList = invalidAgents
-		.map((agent) => {
-			const relPath = path.relative(ctx.root, agent.filePath);
-			return `${relPath} (${agent.name})`;
+	const invalidList = invalidActions
+		.map((action) => {
+			const relPath = path.relative(ctx.root, action.filePath);
+			return `${relPath} (${action.name})`;
 		})
 		.join(', ');
 
 	throw new Error(
-		`[flue] Cloudflare target requires agent filenames to use lower-kebab-case so ` +
-			`Durable Object bindings route correctly. Invalid agent file(s): ${invalidList}. ` +
-			`Rename them to match ${CLOUDFLARE_AGENT_NAME_PATTERN}.`,
+		`[flue] Cloudflare target requires action filenames to use lower-kebab-case so ` +
+			`Durable Object bindings route correctly. Invalid action file(s): ${invalidList}. ` +
+			`Rename them to match ${CLOUDFLARE_ACTION_NAME_PATTERN}.`,
 	);
 }
 
 /**
- * Convert agent name to a PascalCase DO class name.
+ * Convert action name to a PascalCase DO class name.
  * "hello" → "Hello", "with-cloudflare" → "WithCloudflare"
  *
  * routeAgentRequest() converts binding names to kebab-case for URL matching,
- * so "WithCloudflare" → "with-cloudflare" → URL /agents/with-cloudflare/:id
+ * so "WithCloudflare" → "with-cloudflare" → URL /actions/with-cloudflare/:id
  */
-function agentClassName(name: string): string {
+function actionClassName(name: string): string {
 	return name
 		.split(/[-_]/)
 		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))

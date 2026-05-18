@@ -9,7 +9,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 
 export interface CloudflareContext {
 	env: Record<string, any>;
-	agentInstance: {
+	actionInstance: {
 		state: any;
 		setState(state: any): void;
 	};
