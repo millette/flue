@@ -50,7 +50,7 @@ export interface FlueRuntime {
 	webhookAgents: ReadonlyArray<string>;
 
 	/**
-	 * If true, the agent route accepts any registered agent — including
+	 * If true, the action route accepts any registered action — including
 	 * trigger-less ones. Used by the Node target when `FLUE_MODE=local`
 	 * (set by `flue run` and `flue dev --target node`). Always false on
 	 * Cloudflare today.
@@ -60,7 +60,7 @@ export interface FlueRuntime {
 	// ─── Node-only ──────────────────────────────────────────────────────────
 
 	/**
-	 * Map of agent name → handler function. Includes ALL agents (webhook
+	 * Map of action name → handler function. Includes ALL actions (webhook
 	 * and trigger-less); {@link webhookAgents} gates HTTP exposure when
 	 * not in local mode. Required when {@link target} is `'node'`.
 	 */
@@ -352,7 +352,7 @@ const actionRouteHandler: MiddlewareHandler = async (c) => {
 		const handler = rt.handlers?.[name];
 		const createContext = rt.createContext;
 		if (!handler || !createContext) {
-			throw new Error('[flue] Node runtime is missing agent handler configuration.');
+			throw new Error('[flue] Node runtime is missing action handler configuration.');
 		}
 		return handleAgentRequest({
 			request: c.req.raw,
@@ -369,7 +369,7 @@ const actionRouteHandler: MiddlewareHandler = async (c) => {
 	}
 
 	if (!rt.routeAgentRequest) {
-		throw new Error('[flue] Cloudflare runtime is missing agent route forwarding.');
+		throw new Error('[flue] Cloudflare runtime is missing action route forwarding.');
 	}
 	const response = await rt.routeAgentRequest(c.req.raw, c.env);
 	if (response) return response;
@@ -479,13 +479,13 @@ function normalizeRunRequest(
 }
 
 /**
- * Compute the set of agent names considered "registered" for purposes
- * of the agent route's name-validity check.
+ * Compute the set of action names considered "registered" for purposes
+ * of the action route's name-validity check.
  *
  *   - Node: every entry in the handler map (including trigger-less
- *     agents — `allowNonWebhook` controls whether they're actually
+ *     actions — `allowNonWebhook` controls whether they're actually
  *     reachable).
- *   - Cloudflare: only webhook agents have generated DO classes, so
+ *   - Cloudflare: only webhook actions have generated DO classes, so
  *     non-webhook names have no valid landing target.
  */
 function registeredAgentsFor(rt: FlueRuntime): readonly string[] {

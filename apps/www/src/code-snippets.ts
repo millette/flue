@@ -35,7 +35,7 @@ import {
   hydrateFromBucket,
 } from '../connectors/cloudflare-shell';
 
-// POST /agents/support/:id
+// POST /actions/support/:id
 export const triggers = { webhook: true };
 
 // Built for: Cloudflare Workers, R2
@@ -94,7 +94,7 @@ export const CODING_AGENT = `import type { FlueContext } from '@flue/runtime';
 import { Daytona } from '@daytona/sdk';
 import { daytona } from '../connectors/daytona';
 
-// POST /agents/code/:id
+// POST /actions/code/:id
 export const triggers = { webhook: true };
 
 // Built for: Node, Daytona
@@ -115,7 +115,7 @@ export default async function ({ init, payload, env }: FlueContext) {
 export const DATA_AGENT = `import type { FlueContext } from '@flue/runtime';
 import { Bash, InMemoryFs, MountableFs, ReadWriteFs } from 'just-bash';
 
-// POST /agents/data/:id
+// POST /actions/data/:id
 export const triggers = { webhook: true };
 
 // Built for: Node

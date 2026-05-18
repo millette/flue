@@ -388,4 +388,4 @@ export default async function ({ init }: ActionContext) {
    `@struktoai/mirage-browser` (whichever matches their target), make sure
    any credentials for resources they mount are available at runtime (per
    the Authentication section above), and run `flue dev` (or
-   `flue run <agent>`) to try it.
+   `flue run <action>`) to try it.

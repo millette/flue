@@ -11,7 +11,7 @@
  *
  * Invoke:
  *
- *   curl -X POST http://localhost:3583/agents/boom/test1 \
+ *   curl -X POST http://localhost:3583/actions/boom/test1 \
  *     -H 'content-type: application/json' \
  *     -d '{}'
  *

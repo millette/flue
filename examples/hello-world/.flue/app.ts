@@ -31,10 +31,10 @@ app.use('*', async (c, next) => {
 	console.log(`[app] ${c.req.method} ${c.req.path} → ${c.res.status} (${ms}ms)`);
 });
 
-// Custom route outside Flue's agent API.
+// Custom route outside Flue's action API.
 app.get('/api/ping', (c) => c.json({ pong: true, at: new Date().toISOString() }));
 
-// Mount Flue's built-in agent route.
+// Mount Flue's built-in action route.
 app.route('/', flue());
 
 // To expose admin endpoints, import `admin` from `@flue/runtime/app`, then

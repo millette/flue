@@ -343,4 +343,4 @@ installing packages on every cold start.
 3. Tell the user the next steps: install `modal` (if you didn't), make sure
    `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` are available at runtime (per
    the Authentication section above), and run `flue dev` (or
-   `flue run <agent>`) to try it.
+   `flue run <action>`) to try it.

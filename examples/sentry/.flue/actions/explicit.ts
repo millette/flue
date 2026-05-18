@@ -24,7 +24,7 @@
  *
  * Invoke:
  *
- *   curl -X POST http://localhost:3583/agents/explicit/test1 \
+ *   curl -X POST http://localhost:3583/actions/explicit/test1 \
  *     -H 'content-type: application/json' \
  *     -d '{}'
  *

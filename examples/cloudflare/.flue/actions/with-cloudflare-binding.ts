@@ -31,7 +31,7 @@ export default async function ({ init, payload, id }: ActionContext) {
 	const session = await harness.session();
 
 	// ─── Cross-invocation persistence (set/recall) ──────────────────────────
-	// Two requests to the same agent instance id share the default harness/session history.
+	// Two requests to the same action instance id share the default harness/session history.
 	// Verifies the binding-backed provider doesn't lose context across
 	// process boundaries (DO storage round-trip).
 	if (action === 'set') {

@@ -907,8 +907,8 @@ export function parseEnvFiles(absolutePaths: string[]): Record<string, string> {
 
 
 /**
- * Pick a webhook agent name to print in the friendly curl example. Falls back
- * to any agent if none have webhook triggers (the example would 404 on the
+ * Pick a webhook action name to print in the friendly curl example. Falls back
+ * to any action if none have webhook triggers (the example would 404 on the
  * dev server in that case, but it's still a hint at the URL shape). Reads the
  * manifest written by the build at `<output>/manifest.json`, with a
  * source-tree scan fallback in case the manifest is somehow missing.

@@ -110,7 +110,7 @@ npx flue dev --target cloudflare --env .env
 Then test it:
 
 ```bash
-curl http://localhost:3583/agents/translate/test-1 \
+curl http://localhost:3583/actions/translate/test-1 \
   -H "Content-Type: application/json" \
   -d '{"text": "Hello world", "language": "French"}'
 ```
@@ -435,11 +435,11 @@ npx flue build --target cloudflare
 npx wrangler deploy --secrets-file .env
 ```
 
-Every agent with `triggers = { webhook: true }` gets an HTTP endpoint automatically. The route follows the pattern `/agents/<name>/<id>` — for example, `.flue/actions/translate.ts` becomes `/agents/translate/:id`.
+Every action with `triggers = { webhook: true }` gets an HTTP endpoint automatically. The route follows the pattern `/actions/<name>/<id>` — for example, `.flue/actions/translate.ts` becomes `/actions/translate/:id`.
 
 ```bash
-# Hit your deployed agent
-curl https://my-support-agent.<your-subdomain>.workers.dev/agents/support/session-123 \
+# Hit your deployed action
+curl https://my-support-agent.<your-subdomain>.workers.dev/actions/support/session-123 \
   -H "Content-Type: application/json" \
   -d '{"message": "How do I reset my password?"}'
 ```

@@ -172,17 +172,17 @@ The server starts on port `3583`.
 
 ```bash
 # Success case — no Sentry traffic
-curl -X POST http://localhost:3583/agents/hello/test1 \
+curl -X POST http://localhost:3583/actions/hello/test1 \
   -H 'content-type: application/json' \
   -d '{}'
 
 # Run-fatal throw — one Sentry issue
-curl -X POST http://localhost:3583/agents/boom/test1 \
+curl -X POST http://localhost:3583/actions/boom/test1 \
   -H 'content-type: application/json' \
   -d '{}'
 
 # Non-fatal handler-reported errors — two Sentry issues, HTTP 200
-curl -X POST http://localhost:3583/agents/explicit/test1 \
+curl -X POST http://localhost:3583/actions/explicit/test1 \
   -H 'content-type: application/json' \
   -d '{}'
 ```

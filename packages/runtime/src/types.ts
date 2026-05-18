@@ -279,7 +279,7 @@ export interface AgentConfig {
 
 export type ModelConfig = string | false;
 
-// ─── Action Context (passed to agent handlers) ─────────────────────────────
+// ─── Action Context (passed to action handlers) ────────────────────────────
 
 /**
  * Request context passed to action handler functions. Pass type parameters
@@ -287,7 +287,7 @@ export type ModelConfig = string | false;
  * `wrangler types`). Compile-time only — no runtime validation of `payload`.
  */
 export interface ActionContext<TPayload = any, TEnv = Record<string, any>> {
-	/** Agent instance id from the URL `<id>` segment. */
+	/** Action instance id from the URL `<id>` segment. */
 	readonly id: string;
 	/** Server-minted id for this HTTP invocation. */
 	readonly runId: string;

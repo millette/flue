@@ -169,7 +169,7 @@ observe((event, ctx) => {
 	//
 	// `operation` events with `isError: true` represent a single
 	// `prompt()` / `skill()` / `task()` / `shell()` call that
-	// threw. If the agent handler caught and recovered, the run is
+	// threw. If the action handler caught and recovered, the run is
 	// still healthy — capturing here would be noise. If the
 	// handler did NOT catch, the same error propagates up to
 	// `run_end` above and is captured there.
@@ -250,7 +250,7 @@ function safeStringify(value: unknown): string {
 	}
 }
 
-// ─── 3. Mount the Flue agent route ──────────────────────────────────────────
+// ─── 3. Mount the Flue action route ─────────────────────────────────────────
 
 const app = new Hono();
 app.route('/', flue());

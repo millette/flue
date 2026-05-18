@@ -14,8 +14,8 @@ export class NodePlugin implements BuildPlugin {
 
 		const webhookAgents = actions.filter((a) => a.triggers.webhook);
 
-		// Generate import statements for all agent handlers. We register every
-		// agent — including trigger-less ones — in the handler map so that the
+		// Generate import statements for all action handlers. We register every
+		// action — including trigger-less ones — in the handler map so that the
 		// CLI's `flue run` can invoke them in local mode. The `webhookAgents`
 		// list below gates which are reachable over public HTTP when deployed.
 		const agentImports = actions

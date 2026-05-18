@@ -79,14 +79,14 @@ If you want to use different bucket names, edit `wrangler.jsonc` and the
 pnpm exec flue dev --target cloudflare --env ../../.env
 pnpm exec wrangler dev --remote                  # if needed for cf-shell agents
 
-# Trigger an agent
-curl -X POST http://localhost:3583/agents/with-cloudflare-binding/test-1 \
+# Trigger an action
+curl -X POST http://localhost:3583/actions/with-cloudflare-binding/test-1 \
   -H 'Content-Type: application/json' -d '{}'
 
-curl -X POST http://localhost:3583/agents/skills-from-r2/test-1 \
+curl -X POST http://localhost:3583/actions/skills-from-r2/test-1 \
   -H 'Content-Type: application/json' -d '{}'
 
-curl -X POST http://localhost:3583/agents/skills-from-git/test-1 \
+curl -X POST http://localhost:3583/actions/skills-from-git/test-1 \
   -H 'Content-Type: application/json' -d '{}'
 ```
 

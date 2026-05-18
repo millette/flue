@@ -53,7 +53,7 @@ Run it locally:
 
 ```bash
 ANTHROPIC_API_KEY=... npx flue dev --target node
-curl http://localhost:3583/agents/hello/demo \
+curl http://localhost:3583/actions/hello/demo \
   -H 'Content-Type: application/json' \
   -d '{"text":"Hello world","language":"French"}'
 ```

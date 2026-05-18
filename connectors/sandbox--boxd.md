@@ -321,4 +321,4 @@ VM once.
 3. Tell the user the next steps: install `@boxd-sh/sdk` (if you didn't),
    make sure `BOXD_API_KEY` is available at runtime (per the
    Authentication section above), and run `flue dev` (or
-   `flue run <agent>`) to try it.
+   `flue run <action>`) to try it.

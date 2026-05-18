@@ -79,11 +79,11 @@
   });
   ```
 
-- **Public OpenAPI spec for Flue's built-in routes.** `GET /openapi.json` now serves an OpenAPI 3.1 document for `POST /agents/<name>/<id>` and `GET /runs/<runId>{,/events,/stream}`. The spec is generated from Valibot schemas via `hono-openapi`, includes Flue's canonical error envelope, documents SSE routes with `x-flue-streaming: true`, and marks agent invocation payloads as user-defined.
+- **Public OpenAPI spec for Flue's built-in routes.** `GET /openapi.json` now serves an OpenAPI 3.1 document for `POST /actions/<name>/<id>` and `GET /runs/<runId>{,/events,/stream}`. The spec is generated from Valibot schemas via `hono-openapi`, includes Flue's canonical error envelope, documents SSE routes with `x-flue-streaming: true`, and marks action invocation payloads as user-defined.
 
-- **Read-only admin API sub-app.** `admin()` is now exported from `@flue/runtime/app` and can be mounted by user apps with their own auth middleware, e.g. `app.use('/admin/*', myAuthMiddleware); app.route('/admin', admin())`. It serves `GET /openapi.json`, `GET /agents`, `GET /agents/<name>/instances`, `GET /agents/<name>/instances/<id>/runs`, `GET /runs`, and `GET /runs/<runId>` relative to the mount point. Flue ships no auth opinions; middleware order in the user's Hono app controls access.
+- **Read-only admin API sub-app.** `admin()` is now exported from `@flue/runtime/app` and can be mounted by user apps with their own auth middleware, e.g. `app.use('/admin/*', myAuthMiddleware); app.route('/admin', admin())`. It serves `GET /openapi.json`, `GET /actions`, `GET /actions/<name>/instances`, `GET /actions/<name>/instances/<id>/runs`, `GET /runs`, and `GET /runs/<runId>` relative to the mount point. Flue ships no auth opinions; middleware order in the user's Hono app controls access.
 
-- **SDK scaffold for public and admin APIs.** The `@flue/sdk` workspace package now contains a private, hand-written typed client scaffold for deployed Flue apps. It covers agent invocation modes, run lookup/events/streams, and read-only admin routes. The runtime still serves OpenAPI specs, but SDK code generation is deferred until a later pass can wire real spec snapshots and generated request methods end-to-end.
+- **SDK scaffold for public and admin APIs.** The `@flue/sdk` workspace package now contains a private, hand-written typed client scaffold for deployed Flue apps. It covers action invocation modes, run lookup/events/streams, and read-only admin routes. The runtime still serves OpenAPI specs, but SDK code generation is deferred until a later pass can wire real spec snapshots and generated request methods end-to-end.
 
 ### Breaking Changes
 
@@ -103,10 +103,10 @@
 
 - **Malformed run-event query parameters now return structured 400 errors.** `GET /runs/<runId>/events` validates query params before reading run history. `limit` must be an integer in `[1, 1000]`; `after` must be a non-negative integer; `types` must be a comma-separated list of known Flue event type names. Previously malformed `limit` / `after` values were silently defaulted or ignored.
 
-- **Run-lookup HTTP routes are now identified by `runId` alone.** The previous `GET /agents/<name>/<id>/runs/<runId>{,/events,/stream}` route family is removed and replaced with `GET /runs/<runId>{,/events,/stream}`. The new routes work end-to-end on both Node and Cloudflare for any run that exists anywhere in the deployment — the server resolves the owning `(agentName, instanceId)` via a new internal run registry, so callers no longer need to know which agent or instance ran a given run id. External consumers hitting the old paths will get a 404; update to the bare form. The `POST /agents/<name>/<id>` invocation route is unchanged.
+- **Run-lookup HTTP routes are now identified by `runId` alone.** The previous `GET /agents/<name>/<id>/runs/<runId>{,/events,/stream}` route family is removed and replaced with `GET /runs/<runId>{,/events,/stream}`. The new routes work end-to-end on both Node and Cloudflare for any run that exists anywhere in the deployment — the server resolves the owning `(actionName, instanceId)` via a new internal run registry, so callers no longer need to know which action or instance ran a given run id. External consumers hitting the old paths will get a 404; update to the bare form. The `POST /actions/<name>/<id>` invocation route is unchanged.
 
   ```diff
-  - curl http://localhost:3583/agents/hello/inst-1/runs/run_01H...
+  - curl http://localhost:3583/actions/hello/inst-1/runs/run_01H...
   + curl http://localhost:3583/runs/run_01H...
   ```
 
@@ -216,7 +216,7 @@
 
 - **`FlueAgent` is now `FlueHarness`.** The value returned from `init()` is a harness: a configured handle for model defaults, tools, sandbox, filesystem, and sessions. Rename imports/usages from `FlueAgent` to `FlueHarness`, and prefer `const harness = await init(...)` in agent files.
 - **Harnesses and sessions are named, not id'd.** `init({ id })` is now `init({ name })`, defaulting to `"default"`. The returned harness exposes `.name` instead of `.id`. `harness.session(id?)`, `harness.sessions.get/create/delete(id?)`, and `FlueSession.id` are now name-based APIs (`name?`, `.name`).
-- **Session storage keys now include the agent instance id, harness name, and session name.** Existing persisted sessions under the old two-part key shape are not migrated. Cloudflare Durable Object session history from earlier builds will not be read by this release.
+- **Session storage keys now include the action instance id, harness name, and session name.** Existing persisted sessions under the old two-part key shape are not migrated. Cloudflare Durable Object session history from earlier builds will not be read by this release.
 - **Webhook responses return `runId` instead of `requestId`.** Every HTTP invocation now gets a generated `run_<ulid>` exposed to handlers as `ctx.runId`. Webhook mode returns `{ status: 'accepted', runId }`.
 - **The event vocabulary changed for run observability.** `tool_end` is now `tool_call`, `operation_end` is now `operation`, and session correlation fields use `harness`, `session`, and `parentSession` instead of the previous id-oriented names. Consumers of the raw `FlueEvent` stream should update event-type checks and field names.
 - **SSE `event: result` was removed.** Terminal result/error state is now delivered by the wide `run_end` event. Sync responses still return `{ result, _meta: { runId } }`.
@@ -235,7 +235,7 @@
 - **Run lifecycle ordering is durable-before-live.** Terminal `run_end` events are appended before live subscribers are notified and before the run is marked terminal, avoiding missed terminal events for clients connecting near completion.
 - **Live event fan-out is ordered per run.** Durable writes are serialized before publishing each non-terminal event to live subscribers.
 - **SSE streams now use a shared 15s heartbeat.** Both direct agent SSE responses and run-history streams emit heartbeats to avoid idle proxy/client timeouts.
-- **Cloudflare run-route parsing is positional.** An agent instance id of `"runs"` no longer collides with the `/runs` route marker.
+- **Cloudflare run-route parsing is positional.** An action instance id of `"runs"` no longer collides with the `/runs` route marker.
 - **Generated docs and examples were updated for the harness terminology and new run observability APIs.**
 
 ## 0.4.1
@@ -323,9 +323,9 @@ Big release! We are working hard to stabilize our APIs and add any missing and e
 
 - **`flue init` command** scaffolds a starter `flue.config.ts` in the target directory. Flags: `--target <node|cloudflare>` (required), `--root <path>`, `--force` (overwrite existing).
 
-- **`app.ts` runtime entry point.** A new optional `app.ts` (also `.mts` / `.js` / `.mjs`) at the source root lets you take over the request pipeline with custom Hono middleware, routes, auth, etc. Mount Flue's agent handler via `app.route('/', flue())`. New `@flue/sdk/app` subpath export ships:
+- **`app.ts` runtime entry point.** A new optional `app.ts` (also `.mts` / `.js` / `.mjs`) at the source root lets you take over the request pipeline with custom Hono middleware, routes, auth, etc. Mount Flue's action handler via `app.route('/', flue())`. New `@flue/sdk/app` subpath export ships:
 
-  - `flue()` — Hono sub-app exposing `/agents/:name/:id`.
+  - `flue()` — Hono sub-app exposing `/actions/:name/:id`.
   - `Fetchable` — type for the user app's default export.
   - `registerProvider(name, def)` — register a new URL-prefix model provider at runtime, with platform `env` in scope. Supports HTTP and Cloudflare AI binding registrations (`HttpProviderRegistration`, `CloudflareAIBindingRegistration`, `CloudflareAIBinding`).
   - `registerApiProvider` — re-exported from pi-ai for entirely new wire protocols.

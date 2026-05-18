@@ -98,9 +98,9 @@ Add `ANTHROPIC_API_KEY` as a repository secret (**Settings > Secrets and variabl
 
 Now let's build something useful — an issue triage agent that analyzes an issue and reports back. This is where Flue's agent features start to shine.
 
-### The agent handler
+### The action handler
 
-The agent handler is where orchestration lives. The `ActionContext` gives you everything you need: `init()` to create a session, `payload` for input data, and `env` for environment bindings.
+The action handler is where orchestration lives. The `ActionContext` gives you everything you need: `init()` to create a session, `payload` for input data, and `env` for environment bindings.
 
 Once you have a session, you have three core methods:
 
@@ -291,9 +291,9 @@ export default async function ({ init, payload }: ActionContext) {
 
 This pattern — prompt or skill call, check the result, decide what to do next — is how you build sophisticated agents that go beyond single-shot prompts.
 
-## Running agents locally
+## Running actions locally
 
-During development, `flue run` is your main tool. It builds the project and runs the agent in one step:
+During development, `flue run` is your main tool. It builds the project and runs the action in one step:
 
 ```bash
 # Run with a payload
@@ -305,4 +305,4 @@ npx flue run triage --target node --id test-2 \
   --payload '{"issueNumber": 42}' | jq '.severity'
 ```
 
-The CLI builds your project root, starts a temporary server, invokes the agent via SSE, streams progress to stderr, and prints the final result to stdout. The `--id` flag identifies the agent instance — use a consistent ID to resume the default harness/session, or a unique one for a fresh start.
+The CLI builds your project root, starts a temporary server, invokes the action via SSE, streams progress to stderr, and prints the final result to stdout. The `--id` flag identifies the action instance — use a consistent ID to resume the default harness/session, or a unique one for a fresh start.

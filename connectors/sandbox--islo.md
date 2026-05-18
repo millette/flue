@@ -297,4 +297,4 @@ export default async function ({ init }: ActionContext) {
 3. Tell the user the next steps: install the islo CLI (if you didn't),
    run `islo login` (or make `ISLO_API_KEY` available at runtime per the
    Authentication section above), pre-provision a sandbox with
-   `islo use <name>`, then run `flue dev` (or `flue run <agent>`) to try it.
+   `islo use <name>`, then run `flue dev` (or `flue run <action>`) to try it.

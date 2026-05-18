@@ -81,9 +81,9 @@ Use these filesystem APIs for setup, post-processing, or any other host-side fil
 
 ## Default Workspace
 
-`getDefaultWorkspace()` constructs `new Workspace({ sql: getCloudflareContext().storage.sql })` for the current agent Durable Object.
+`getDefaultWorkspace()` constructs `new Workspace({ sql: getCloudflareContext().storage.sql })` for the current action Durable Object.
 
-Call it inside an agent invocation, not at module top level. Calling it twice in the same agent instance returns two handles to the same default-namespace backing store. If you need isolated workspaces inside one Durable Object, install `@cloudflare/shell` and construct them yourself with explicit namespaces:
+Call it inside an action invocation, not at module top level. Calling it twice in the same action instance returns two handles to the same default-namespace backing store. If you need isolated workspaces inside one Durable Object, install `@cloudflare/shell` and construct them yourself with explicit namespaces:
 
 ```ts
 import { Workspace } from '@cloudflare/shell';

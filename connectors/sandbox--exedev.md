@@ -802,4 +802,4 @@ export default async function ({ init, env }: ActionContext) {
 4. Tell the user the next steps: install `ssh2` and `@types/ssh2` (if you
    didn't), make sure the needed exe.dev SSH/API values are available at
    runtime (per the Authentication section above), and run `flue dev --target node`
-   (or `flue run <agent> --target node`) to try it.
+   (or `flue run <action> --target node`) to try it.

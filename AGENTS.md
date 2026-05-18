@@ -6,7 +6,7 @@ Agent framework where agents are directories compiled into deployable server art
 
 ```
 Action (handler)                — `actions/<name>.ts`; named by its file
-└─ AgentInstance                — URL `<id>`; exposed to handlers as `ctx.id`
+└─ ActionInstance               — URL `<id>`; exposed to handlers as `ctx.id`
    └─ Run                       — one HTTP invocation; exposed as `ctx.runId`
       └─ Harness                — one `init({ name })` call; defaults to `"default"`
          └─ Session             — one `harness.session(name?)`; defaults to `"default"`
@@ -14,7 +14,7 @@ Action (handler)                — `actions/<name>.ts`; named by its file
                └─ Turn          — one LLM round-trip inside pi-agent-core
 ```
 
-Use `harness` as the variable name for the return value of `init()`. Agents have names; agent instances have ids; harnesses and sessions have names; runs and operations have generated ids.
+Use `harness` as the variable name for the return value of `init()`. Actions have names; action instances have ids; harnesses and sessions have names; runs and operations have generated ids.
 
 ## Project Structure
 
@@ -32,12 +32,12 @@ pnpm run build          # in packages/runtime/
 pnpm run build          # in packages/cli/
 ```
 
-## Running Agents
+## Running Actions
 
 Three commands:
 
 - `flue dev` — long-running watch-mode dev server. Edits trigger rebuilds + reloads.
-- `flue run` — one-shot, production-style: build, invoke an agent once, exit. Used in CI / scripted invocations.
+- `flue run` — one-shot, production-style: build, invoke an action once, exit. Used in CI / scripted invocations.
 - `flue build` — produce a `dist/` deployable artifact (no run).
 
 `--root` points at the project root. Defaults to the current working directory if omitted. By default, the build is written to `<root>/dist/`; use `--output <path>` to redirect the build elsewhere.
@@ -82,7 +82,7 @@ For `--target cloudflare`, the project must have `wrangler` available (it's a pe
 ### `flue run`
 
 ```
-node packages/cli/bin/flue.mjs run <agent-name> --target node --id <id> [--payload '<json>'] [--root <path>] [--output <path>]
+node packages/cli/bin/flue.mjs run <action-name> --target node --id <id> [--payload '<json>'] [--root <path>] [--output <path>]
 ```
 
 Examples (run from the `examples/hello-world/` directory so the `./.flue/` source layout is picked up):
@@ -93,7 +93,7 @@ node ../../packages/cli/bin/flue.mjs run hello --target node --id test-1
 node ../../packages/cli/bin/flue.mjs run simple-agent --target node --id test-2 --payload '{"prompt": "Describe Flue briefly."}'
 ```
 
-This builds the project, starts a temporary server, invokes the agent via SSE, streams output to stderr, prints the final result to stdout, and shuts down.
+This builds the project, starts a temporary server, invokes the action via SSE, streams output to stderr, prints the final result to stdout, and shuts down.
 
 **Requires `ANTHROPIC_API_KEY` in the environment.** For testing, use `claude-haiku-4-5` (cheapest model).
 
@@ -120,6 +120,6 @@ init({ model: 'cloudflare/@cf/moonshotai/kimi-k2.6' })
 
 ## Architecture
 
-### Agent = Deployed Workspace
+### Action = Deployed Workspace
 
-A repo is built and deployed as an agent workspace. `flue build` compiles action handlers plus imported agent definitions, skills, tools, and supporting modules into a self-contained server artifact. On every push to main, the artifact can be rebuilt and redeployed.
+A repo is built and deployed as an action workspace. `flue build` compiles action handlers plus imported agent definitions, skills, tools, and supporting modules into a self-contained server artifact. On every push to main, the artifact can be rebuilt and redeployed.

@@ -5,8 +5,8 @@ export const triggers = { webhook: true };
 /**
  * Tests cross-invocation session persistence.
  *
- * The agent instance id comes from the URL (routed by the platform).
- * Two requests to the same agent instance id share the default harness/session history.
+ * The action instance id comes from the URL (routed by the platform).
+ * Two requests to the same action instance id share the default harness/session history.
  *
  * Payload:
  *   { "action": "set" }    — store a secret in the session
@@ -14,8 +14,8 @@ export const triggers = { webhook: true };
  *
  * This is a multi-invocation test — it requires a running server (not flue run).
  * Example:
- *   curl -X POST localhost:3000/agents/session-test/s1 -d '{"action":"set"}'
- *   curl -X POST localhost:3000/agents/session-test/s1 -d '{"action":"recall"}'
+ *   curl -X POST localhost:3000/actions/session-test/s1 -d '{"action":"set"}'
+ *   curl -X POST localhost:3000/actions/session-test/s1 -d '{"action":"recall"}'
  *
  * Note to maintainers:
  * This is a pain to test, so only run this as a test if you need the extra level of confidence,

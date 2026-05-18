@@ -215,4 +215,4 @@ export default async function ({ init, env }: ActionContext) {
 3. Tell the user the next steps: install `@daytona/sdk` (if you didn't),
    make sure `DAYTONA_API_KEY` is available at runtime (per the
    Authentication section above), and run `flue dev` (or
-   `flue run <agent>`) to try it.
+   `flue run <action>`) to try it.

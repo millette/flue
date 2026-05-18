@@ -256,4 +256,4 @@ export default async function ({ init }: ActionContext) {
 3. Tell the user the next steps: install `@vercel/sandbox` (if you didn't),
    make sure `VERCEL_OIDC_TOKEN` is available at runtime (per the
    Authentication section above), and run `flue dev` (or
-   `flue run <agent>`) to try it.
+   `flue run <action>`) to try it.

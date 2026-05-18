@@ -4,8 +4,8 @@
  * exposes via `.fetch(request, env, ctx)`.
  *
  * The same `app.ts` shape works on both Node and Cloudflare targets;
- * `flue()` adapts internally. On Cloudflare the agent route forwards to
- * the per-agent Durable Object via the Agents SDK; everything else is
+ * `flue()` adapts internally. On Cloudflare the action route forwards to
+ * the per-action Durable Object via the Agents SDK; everything else is
  * just a Hono app.
  *
  * Delete this file and the build falls back to a default app that
@@ -52,8 +52,8 @@ const app = new Hono();
 // endpoint that doesn't need agent state / streaming.
 app.get('/api/ping', (c) => c.json({ pong: true, at: new Date().toISOString() }));
 
-// Flue's built-in agent route: `POST /agents/:name/:id`. Forwards into
-// the appropriate per-agent DO via routeAgentRequest().
+// Flue's built-in action route: `POST /actions/:name/:id`. Forwards into
+// the appropriate per-action DO via routeAgentRequest().
 app.route('/', flue());
 
 // To expose admin endpoints, import `admin` from `@flue/runtime/app`, then

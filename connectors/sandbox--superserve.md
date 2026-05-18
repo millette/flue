@@ -338,4 +338,4 @@ they're not reinstalling tooling on every cold start.
 3. Tell the user the next steps: install `@superserve/sdk` (if you didn't),
    make sure `SUPERSERVE_API_KEY` is available at runtime (per the
    Authentication section above), and run `flue dev` (or
-   `flue run <agent>`) to try it.
+   `flue run <action>`) to try it.

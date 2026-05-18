@@ -84,12 +84,12 @@ npx flue dev --target node --env .env
 Test it:
 
 ```bash
-curl http://localhost:3583/agents/translate/test-1 \
+curl http://localhost:3583/actions/translate/test-1 \
   -H "Content-Type: application/json" \
   -d '{"text": "Hello world", "language": "French"}'
 ```
 
-Every agent with `triggers = { webhook: true }` gets an HTTP endpoint automatically. The route follows the pattern `/agents/<name>/<id>` — for example, `.flue/actions/translate.ts` becomes `/agents/translate/:id`.
+Every action with `triggers = { webhook: true }` gets an HTTP endpoint automatically. The route follows the pattern `/actions/<name>/<id>` — for example, `.flue/actions/translate.ts` becomes `/actions/translate/:id`.
 
 For a one-shot production-style run (no watcher), use `flue build` + the generated server. The built server reads `process.env` directly, so source your env file in your shell or pass values explicitly:
 
@@ -101,7 +101,7 @@ node dist/server.mjs
 
 `flue build --target node` compiles your project into a `./dist` directory. The built server uses [Hono](https://hono.dev/) under the hood and listens on port 3000 by default (configurable via the `PORT` environment variable). Your project's `node_modules` are still needed at runtime — the build externalizes your dependencies rather than bundling them.
 
-You can also invoke any agent from the CLI without starting a server. `flue run` accepts the same `--env` flag:
+You can also invoke any action from the CLI without starting a server. `flue run` accepts the same `--env` flag:
 
 ```bash
 npx flue run translate --target node --id test-1 --env .env \
@@ -292,8 +292,7 @@ PORT=8080 node dist/server.mjs
 The server exposes:
 
 - `GET /health` — Health check
-- `GET /agents` — Agent manifest (lists all agents and their triggers)
-- `POST /agents/:name/:id` — Invoke an agent
+- `POST /actions/:name/:id` — Invoke an action
 
 ### Deploying with Docker
 

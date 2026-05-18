@@ -253,4 +253,4 @@ tooling on every cold start.
    actually wrote the file.
 3. Tell the user the next steps: install `e2b` (if you didn't), make sure
    `E2B_API_KEY` is available at runtime (per the Authentication section
-   above), and run `flue dev` (or `flue run <agent>`) to try it.
+   above), and run `flue dev` (or `flue run <action>`) to try it.

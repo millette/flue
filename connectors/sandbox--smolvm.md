@@ -284,4 +284,4 @@ so the OCI layer cache stays warm. For one-shot work, `withMachine` from
    actually wrote the file.
 3. Tell the user the next steps: install `smolvm-embedded` (if you didn't),
    confirm they are on a macOS or Linux host with hypervisor support, and
-   run `flue dev` (or `flue run <agent>`) to try it.
+   run `flue dev` (or `flue run <action>`) to try it.
