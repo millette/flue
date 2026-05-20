@@ -364,6 +364,94 @@ describe('Bare /runs/:runId routes via flue()', () => {
 		expect(streamOp?.['x-flue-streaming']).toBe(true);
 	});
 
+	it('returns sync POST results before detached sends settle while keeping the run active', async () => {
+		const runStore = new InMemoryRunStore();
+		let releaseSend: (() => void) | undefined;
+		const wait = new Promise<void>((resolve) => {
+			releaseSend = resolve;
+		});
+
+		configureFlueRuntime({
+			target: 'node',
+			webhookAgents: ['hello'],
+			allowNonWebhook: false,
+			handlers: {
+				hello: async (ctx) => {
+					const agent = await ctx.init({ model: false });
+					const harness = agent.harness() as FlueHarness;
+					(harness as FlueHarness).session = async () => ({
+						prompt() {
+							return wait as never;
+						},
+					}) as unknown as FlueSession;
+					agent.send('hello');
+					return { accepted: true };
+				},
+			},
+			createContext: (agentName, id, runId, payload, req) =>
+				createFlueContext({
+					agentName,
+					id,
+					runId,
+					payload,
+					env: {},
+					req,
+					agentConfig: { systemPrompt: '', skills: {}, roles: {}, model: undefined, resolveModel: () => undefined },
+					createDefaultEnv: async () => bashFactoryToSessionEnv(async () => new Bash()),
+					defaultStore: new InMemorySessionStore(),
+					registrationStore: new InMemoryRegistrationStore(),
+				}),
+			runStore,
+		});
+
+		const app = new Hono();
+		app.route('/', flue());
+		const response = await app.fetch(new Request('http://localhost/agents/hello/inst-post', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }));
+		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({ result: { accepted: true } });
+		const runId = response.headers.get('x-flue-run-id');
+		if (!runId) throw new Error('missing run id');
+		expect((await runStore.getRun(runId))?.status).toBe('active');
+		releaseSend?.();
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect((await runStore.getRun(runId))?.status).toBe('completed');
+	});
+
+	it('finalizes sync runs as errors when response serialization fails', async () => {
+		const runStore = new InMemoryRunStore();
+		configureFlueRuntime({
+			target: 'node',
+			webhookAgents: ['hello'],
+			allowNonWebhook: false,
+			handlers: {
+				hello: async () => ({ bad: 1n }),
+			},
+			createContext: (agentName, id, runId, payload, req) =>
+				createFlueContext({
+					agentName,
+					id,
+					runId,
+					payload,
+					env: {},
+					req,
+					agentConfig: { systemPrompt: '', skills: {}, roles: {}, model: undefined, resolveModel: () => undefined },
+					createDefaultEnv: async () => ({}) as never,
+					defaultStore: new InMemorySessionStore(),
+					registrationStore: new InMemoryRegistrationStore(),
+				}),
+			runStore,
+		});
+
+		const app = new Hono();
+		app.route('/', flue());
+		const response = await app.fetch(new Request('http://localhost/agents/hello/inst-json', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }));
+		expect(response.status).toBe(500);
+		const runId = response.headers.get('x-flue-run-id');
+		if (!runId) throw new Error('missing run id');
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect((await runStore.getRun(runId))?.status).toBe('errored');
+	});
+
 	it('keeps instance admission busy until detached sends settle', async () => {
 		const instanceAdmission = new InMemoryInstanceRunAdmission();
 		let releaseSend: (() => void) | undefined;
@@ -412,6 +500,7 @@ describe('Bare /runs/:runId routes via flue()', () => {
 		expect(second.status).toBe(409);
 		releaseSend?.();
 		expect((await first).status).toBe(200);
+		await new Promise((resolve) => setTimeout(resolve, 0));
 		const third = await app.fetch(new Request('http://localhost/agents/hello/inst-send', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }));
 		expect(third.status).toBe(200);
 	});
@@ -1176,6 +1265,7 @@ describe('Bare /runs/:runId routes via flue()', () => {
 			}),
 		);
 		const runId = ((await invoke.json()) as { _meta: { runId: string } })._meta.runId;
+		await new Promise((resolve) => setTimeout(resolve, 25));
 
 		const eventsRes = await app.fetch(new Request(`http://localhost/runs/${runId}/events`));
 		const events = ((await eventsRes.json()) as { events: Array<{ type: string }> }).events;

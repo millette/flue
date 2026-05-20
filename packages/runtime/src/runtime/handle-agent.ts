@@ -51,6 +51,8 @@ export type RunHandlerFn = (
 	handler: AgentHandler,
 ) => unknown | Promise<unknown>;
 
+export type StartBackgroundFn = (work: () => Promise<void>) => void;
+
 export interface HandleAgentOptions {
 	/** Standard Fetch Request. */
 	request: Request;
@@ -81,6 +83,8 @@ export interface HandleAgentOptions {
 	 * mid-stream.
 	 */
 	runHandler?: RunHandlerFn;
+	/** Keep detached sync finalization alive after the HTTP response returns. */
+	startBackground?: StartBackgroundFn;
 	/** Per-target run history store. If omitted, run persistence is disabled. */
 	runStore?: RunStore;
 	/** Per-target admission lane for serializing runs by agent instance. */
@@ -133,6 +137,7 @@ export async function handleAgentRequest(opts: HandleAgentOptions): Promise<Resp
 	} = opts;
 	const startWebhook = opts.startWebhook ?? defaultStartWebhook;
 	const runHandler = opts.runHandler ?? defaultRunHandler;
+	const startBackground = opts.startBackground ?? defaultStartBackground;
 	const runId = generateRunId();
 
 	const acquiredLease = instanceAdmission
@@ -187,6 +192,7 @@ export async function handleAgentRequest(opts: HandleAgentOptions): Promise<Resp
 				request,
 				createContext,
 				runHandler,
+				startBackground,
 				runStore,
 				lease,
 				runSubscribers,
@@ -204,6 +210,7 @@ export async function handleAgentRequest(opts: HandleAgentOptions): Promise<Resp
 				request,
 				createContext,
 				runHandler,
+				startBackground,
 				runStore,
 				lease,
 				runSubscribers,
@@ -234,6 +241,7 @@ interface ModeOptions {
 	request: Request;
 	createContext: CreateContextFn;
 	runHandler: RunHandlerFn;
+	startBackground: StartBackgroundFn;
 	runStore?: RunStore;
 	lease?: InstanceRunLease;
 	runSubscribers?: RunSubscriberRegistry;
@@ -439,6 +447,7 @@ async function runSyncMode(opts: ModeOptions): Promise<Response> {
 		request,
 		createContext,
 		runHandler,
+		startBackground,
 		runStore,
 		lease,
 		runSubscribers,
@@ -457,12 +466,23 @@ async function runSyncMode(opts: ModeOptions): Promise<Response> {
 		runRegistry,
 	});
 	const { ctx } = lifecycle;
+	const flushFanout = beginRunLifecycle(lifecycle);
 	try {
-		const result = await withRunLifecycle(lifecycle, () => runHandler(ctx, handler));
-		return new Response(
-			JSON.stringify({ result: result === undefined ? null : result, _meta: { runId } }),
-			{ headers: { 'content-type': 'application/json', 'X-Flue-Run-Id': runId } },
-		);
+		const result = await runHandler(ctx, handler);
+		const body = JSON.stringify({ result: result === undefined ? null : result, _meta: { runId } });
+		startBackground(async () => {
+			await finalizeRunLifecycle(lifecycle, flushFanout, { result, isError: false });
+		});
+		return new Response(body, {
+			headers: { 'content-type': 'application/json', 'X-Flue-Run-Id': runId },
+		});
+	} catch (error) {
+		startBackground(async () => {
+			await finalizeRunLifecycle(lifecycle, flushFanout, { isError: true, error });
+		});
+		const response = toHttpResponse(error);
+		response.headers.set('X-Flue-Run-Id', runId);
+		return response;
 	} finally {
 		ctx.setEventCallback(undefined);
 	}
@@ -530,21 +550,34 @@ async function withRunLifecycle<T>(
 	body: () => T | Promise<T>,
 	onIdle?: () => void,
 ): Promise<T> {
-	const flushFanout = subscribeRunFanout(lifecycle);
-	emitRunStart(lifecycle);
+	const flushFanout = beginRunLifecycle(lifecycle);
 	try {
 		const result = await body();
-		await lifecycle.ctx.waitForIdle();
-		onIdle?.();
-		await flushFanout();
-		await emitRunEnd(lifecycle, { result, isError: false });
+		await finalizeRunLifecycle(lifecycle, flushFanout, { result, isError: false }, onIdle);
 		return result;
 	} catch (error) {
+		await finalizeRunLifecycle(lifecycle, flushFanout, { isError: true, error }, onIdle);
+		throw error;
+	}
+}
+
+function beginRunLifecycle(lifecycle: RunLifecycle): () => Promise<void> {
+	const flushFanout = subscribeRunFanout(lifecycle);
+	emitRunStart(lifecycle);
+	return flushFanout;
+}
+
+async function finalizeRunLifecycle(
+	lifecycle: RunLifecycle,
+	flushFanout: () => Promise<void>,
+	input: { result?: unknown; isError: false } | { isError: true; error: unknown },
+	onIdle?: () => void,
+): Promise<void> {
+	try {
 		await lifecycle.ctx.waitForIdle();
 		onIdle?.();
 		await flushFanout();
-		await emitRunEnd(lifecycle, { isError: true, error });
-		throw error;
+		await emitRunEnd(lifecycle, input);
 	} finally {
 		await lifecycle.lease?.release();
 	}
@@ -700,3 +733,9 @@ const defaultStartWebhook: StartWebhookFn = (_runId, run) => run();
  * wrapper.
  */
 const defaultRunHandler: RunHandlerFn = (ctx, handler) => handler(ctx);
+
+const defaultStartBackground: StartBackgroundFn = (work) => {
+	void work().catch((error) => {
+		console.error('[flue] Detached sync run finalization failed:', error);
+	});
+};

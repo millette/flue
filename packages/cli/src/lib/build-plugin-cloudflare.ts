@@ -384,6 +384,12 @@ async function dispatchAgent(request, doInstance, agentName, handler) {
       assertAgentsDurabilityApi(doInstance, 'keepAliveWhile');
       return doInstance.keepAliveWhile(() => h(ctx));
     }),
+    startBackground: (work) => {
+      assertAgentsDurabilityApi(doInstance, 'keepAliveWhile');
+      void doInstance.keepAliveWhile(() => runWithInstanceContext(doInstance, work)).catch((error) => {
+        console.error('[flue] Detached sync run finalization failed:', error);
+      });
+    },
   });
 }
 

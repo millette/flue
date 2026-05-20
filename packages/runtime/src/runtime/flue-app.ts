@@ -21,6 +21,7 @@ import {
 	type CreateContextFn,
 	handleAgentRequest,
 	type RunHandlerFn,
+	type StartBackgroundFn,
 	type StartWebhookFn,
 } from './handle-agent.ts';
 import { type HandleRunRouteOptions, handleRunRouteRequest } from './handle-run-routes.ts';
@@ -76,6 +77,8 @@ export interface FlueRuntime {
 
 	/** Optional Node foreground handler wrapper. Defaults to direct invocation. */
 	runHandler?: RunHandlerFn;
+	/** Optional detached sync finalization keeper. Defaults to direct background execution. */
+	startBackground?: StartBackgroundFn;
 
 	/** Node run history store. */
 	runStore?: RunStore;
@@ -357,6 +360,7 @@ const agentRouteHandler: MiddlewareHandler = async (c) => {
 			createContext,
 			startWebhook: rt.startWebhook,
 			runHandler: rt.runHandler,
+			startBackground: rt.startBackground,
 			runStore: rt.runStore,
 			instanceAdmission: rt.instanceAdmission,
 			runSubscribers: rt.runSubscribers,
