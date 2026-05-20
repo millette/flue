@@ -39,12 +39,6 @@ import {
 	type ResultToolBundle,
 	ResultUnavailableError,
 } from './result.ts';
-import {
-	assertRoleExists,
-	resolveEffectiveRole as resolveEffectiveRoleName,
-	resolveRoleModel,
-	resolveRoleThinkingLevel,
-} from './roles.ts';
 import { generateOperationId } from './runtime/ids.ts';
 import { getProviderConfiguration, getRegisteredApiKey } from './runtime/providers.ts';
 import { createFlueFs } from './sandbox.ts';
@@ -86,7 +80,6 @@ export interface CreateTaskSessionOptions {
 	taskId: string;
 	parentEnv: SessionEnv;
 	cwd?: string;
-	role?: string;
 	depth: number;
 }
 
@@ -105,7 +98,6 @@ interface SessionInitOptions {
 	onAgentEvent?: FlueEventCallback;
 	agentTools?: ToolDefinition[];
 	toolFactory?: SessionToolFactory;
-	sessionRole?: string;
 	taskDepth?: number;
 	createTaskSession?: CreateTaskSession;
 	onDelete?: () => void;
@@ -118,7 +110,6 @@ interface SessionInitOptions {
 // defaults — the name no longer reflects what it does.
 interface RuntimeScopeOptions {
 	tools: ToolDefinition[];
-	role?: string;
 	model?: string;
 	thinkingLevel?: ThinkingLevel;
 	callSite: string;
@@ -136,7 +127,6 @@ interface InternalTaskResult<T> {
 	taskId: string;
 	session: string;
 	messageId?: string;
-	role?: string;
 	cwd?: string;
 }
 
@@ -405,9 +395,6 @@ export class Session implements FlueSession {
 	readonly name: string;
 	readonly fs: FlueFs;
 	metadata: Record<string, any>;
-	get role(): string | undefined {
-		return this.sessionRole;
-	}
 
 	private harness: Agent;
 	private storageKey: string;
@@ -427,7 +414,6 @@ export class Session implements FlueSession {
 	private toolStartTimes = new Map<string, number>();
 	private turnStartTime: number | undefined;
 	private activeTasks = new Set<Session>();
-	private sessionRole: string | undefined;
 	private taskDepth: number;
 	private createTaskSession: CreateTaskSession | undefined;
 	private onDelete: (() => void) | undefined;
@@ -441,7 +427,6 @@ export class Session implements FlueSession {
 		this.store = options.store;
 		this.agentTools = options.agentTools ?? [];
 		this.toolFactory = options.toolFactory;
-		this.sessionRole = options.sessionRole;
 		this.taskDepth = options.taskDepth ?? 0;
 		this.createTaskSession = options.createTaskSession;
 		this.onDelete = options.onDelete;
@@ -452,9 +437,6 @@ export class Session implements FlueSession {
 		this.history = SessionHistory.fromData(options.existingData);
 
 		const systemPrompt = this.config.systemPrompt;
-
-		assertRoleExists(this.config.roles, this.config.role);
-		assertRoleExists(this.config.roles, this.sessionRole);
 
 		const builtinTools = this.createBuiltinTools(this.env, []);
 		const tools = [
@@ -579,7 +561,6 @@ export class Session implements FlueSession {
 					promptText: buildPromptText(text, schema),
 					schema,
 					tools: options?.tools,
-					role: options?.role,
 					model: options?.model,
 					thinkingLevel: options?.thinkingLevel,
 					images: options?.images,
@@ -637,7 +618,6 @@ export class Session implements FlueSession {
 					promptText,
 					schema,
 					tools: options?.tools,
-					role: options?.role,
 					model: options?.model,
 					thinkingLevel: options?.thinkingLevel,
 					images: options?.images,
@@ -768,44 +748,15 @@ export class Session implements FlueSession {
 		this.onDelete?.();
 	}
 
-	private resolveEffectiveRole(callRole?: string): string | undefined {
-		return resolveEffectiveRoleName({
-			roles: this.config.roles,
-			agentRole: this.config.role,
-			sessionRole: this.sessionRole,
-			callRole,
-		});
-	}
-
-	/** Precedence: call-level > role-level > agent-level default. */
-	private resolveModelForCall(
-		promptModel: string | undefined,
-		roleName: string | undefined,
-		callSite: string,
-	): Model<any> {
-		let model: Model<any> | undefined = this.config.model;
-
-		const roleModel = resolveRoleModel(this.config.roles, roleName);
-		if (roleModel) {
-			model = this.config.resolveModel(roleModel);
-		}
-
-		if (promptModel) {
-			model = this.config.resolveModel(promptModel);
-		}
-
+	/** Precedence: call-level > agent-level default. */
+	private resolveModelForCall(promptModel: string | undefined, callSite: string): Model<any> {
+		const model = promptModel ? this.config.resolveModel(promptModel) : this.config.model;
 		return this.requireModel(model, callSite);
 	}
 
-	/** Precedence: call-level > role-level > agent-level default > 'medium'. */
-	private resolveThinkingLevelForCall(
-		callValue: ThinkingLevel | undefined,
-		roleName: string | undefined,
-	): ThinkingLevel {
-		if (callValue !== undefined) return callValue;
-		const roleLevel = resolveRoleThinkingLevel(this.config.roles, roleName);
-		if (roleLevel !== undefined) return roleLevel;
-		return this.config.thinkingLevel ?? 'medium';
+	/** Precedence: call-level > agent-level default > 'medium'. */
+	private resolveThinkingLevelForCall(callValue: ThinkingLevel | undefined): ThinkingLevel {
+		return callValue ?? this.config.thinkingLevel ?? 'medium';
 	}
 
 	/**
@@ -817,7 +768,7 @@ export class Session implements FlueSession {
 		if (model) return model;
 		throw new Error(
 			`[flue] No model configured for ${callSite}. ` +
-				`Pass \`{ model: "provider/model-id" }\` to this call or configure a role model.`,
+				`Pass \`{ model: "provider/model-id" }\` to this call or configure an agent model.`,
 		);
 	}
 
@@ -844,14 +795,6 @@ export class Session implements FlueSession {
 		return { ...(payload as Record<string, unknown>), store: true };
 	}
 
-	private buildSystemPrompt(roleName?: string): string {
-		const parts = [this.config.systemPrompt];
-		if (!roleName) return parts.join('\n\n');
-		const role = this.config.roles[roleName];
-		if (!role) return parts.join('\n\n');
-		parts.push(`<role name="${role.name}">\n${role.instructions}\n</role>`);
-		return parts.filter(Boolean).join('\n\n');
-	}
 
 	private throwMissingSkill(skill: string): never {
 		const available = Object.keys(this.config.skills).join(', ') || '(none)';
@@ -920,21 +863,19 @@ export class Session implements FlueSession {
 	private createBuiltinTools(
 		env: SessionEnv,
 		tools: ToolDefinition[],
-		role?: string,
 		model?: string,
 		thinkingLevel?: ThinkingLevel,
 	): AgentTool<any>[] {
 		const runTask = (params: TaskToolParams, signal?: AbortSignal) =>
-			this.runTaskForTool(params, tools, role, model, thinkingLevel, signal);
+			this.runTaskForTool(params, tools, model, thinkingLevel, signal);
 
 		if (this.toolFactory) {
-			const connectorTools = this.toolFactory(env, { roles: this.config.roles });
+			const connectorTools = this.toolFactory(env);
 			this.validateConnectorTools(connectorTools);
-			return [...connectorTools, createTaskTool(runTask, this.config.roles)];
+			return [...connectorTools, createTaskTool(runTask)];
 		}
 
 		return createTools(env, {
-			roles: this.config.roles,
 			skills: getBundledSkills(this.config.skills),
 			task: runTask,
 		});
@@ -969,17 +910,12 @@ export class Session implements FlueSession {
 		const previousSystemPrompt = this.harness.state.systemPrompt;
 		const previousThinkingLevel = this.harness.state.thinkingLevel;
 
-		const resolvedModel = this.resolveModelForCall(options.model, options.role, options.callSite);
+		const resolvedModel = this.resolveModelForCall(options.model, options.callSite);
 		this.harness.state.model = resolvedModel;
-		this.harness.state.systemPrompt = this.buildSystemPrompt(options.role);
-		this.harness.state.thinkingLevel = this.resolveThinkingLevelForCall(
-			options.thinkingLevel,
-			options.role,
-		);
+		this.harness.state.thinkingLevel = this.resolveThinkingLevelForCall(options.thinkingLevel);
 		const builtinTools = this.createBuiltinTools(
 			this.env,
 			options.tools,
-			options.role,
 			options.model,
 			options.thinkingLevel,
 		);
@@ -1007,7 +943,6 @@ export class Session implements FlueSession {
 	private async runTaskForTool(
 		params: TaskToolParams,
 		tools: ToolDefinition[],
-		inheritedRole: string | undefined,
 		inheritedModel: string | undefined,
 		inheritedThinkingLevel: ThinkingLevel | undefined,
 		signal?: AbortSignal,
@@ -1015,7 +950,6 @@ export class Session implements FlueSession {
 		const result = await this.runTask(
 			params.prompt,
 			{
-				role: params.role ?? inheritedRole,
 				inheritedModel,
 				inheritedThinkingLevel,
 				cwd: params.cwd,
@@ -1029,9 +963,9 @@ export class Session implements FlueSession {
 				details: {
 					taskId: result.taskId,
 					session: result.session,
-					messageId: result.messageId,
-				role: result.role,
+				messageId: result.messageId,
 				cwd: result.cwd,
+
 			},
 		};
 	}
@@ -1100,7 +1034,6 @@ export class Session implements FlueSession {
 		if (signal?.aborted) throw abortErrorFor(signal);
 
 		const taskId = crypto.randomUUID();
-		const requestedRole = options?.role ?? this.sessionRole ?? this.config.role;
 		let child: Session | undefined;
 		let abortListener: (() => void) | undefined;
 
@@ -1108,21 +1041,17 @@ export class Session implements FlueSession {
 			type: 'task_start',
 			taskId,
 			prompt: text,
-			role: requestedRole,
 			cwd: options?.cwd,
 			parentSession: this.name,
 		});
 		const taskStartMs = Date.now();
 
 		try {
-			const role = this.resolveEffectiveRole(options?.role);
-
 			child = await this.createTaskSession({
 				parentSession: this.name,
 				taskId,
 				parentEnv: this.env,
 				cwd: options?.cwd,
-				role,
 				depth: this.taskDepth + 1,
 			});
 			await this.recordTaskSession(child.name, child.storageKey, taskId);
@@ -1136,13 +1065,9 @@ export class Session implements FlueSession {
 			}
 
 			const schema = resolveResultOption(options);
-			const roleModel = resolveRoleModel(this.config.roles, role);
-			const roleThinkingLevel = resolveRoleThinkingLevel(this.config.roles, role);
 			const childOptions: PromptOptions<v.GenericSchema | undefined> = {
-				model: options?.model ?? (roleModel ? undefined : options?.inheritedModel),
-				thinkingLevel:
-					options?.thinkingLevel ??
-					(roleThinkingLevel !== undefined ? undefined : options?.inheritedThinkingLevel),
+				model: options?.model ?? options?.inheritedModel,
+				thinkingLevel: options?.thinkingLevel ?? options?.inheritedThinkingLevel,
 				tools: options?.tools,
 				images: options?.images,
 				signal,
@@ -1156,7 +1081,6 @@ export class Session implements FlueSession {
 				taskId,
 				session: child.name,
 				messageId: child.getLatestAssistantMessageId(),
-				role,
 				cwd: options?.cwd,
 			};
 			this.emit({
@@ -1615,7 +1539,6 @@ export class Session implements FlueSession {
 		promptText: string;
 		schema: v.GenericSchema | undefined;
 		tools: ToolDefinition[] | undefined;
-		role: string | undefined;
 		model: string | undefined;
 		thinkingLevel: ThinkingLevel | undefined;
 		images: ImageContent[] | undefined;
@@ -1632,13 +1555,11 @@ export class Session implements FlueSession {
 		| PromptResponse
 		| (Omit<PromptResultResponse<unknown>, 'result'> & { result: unknown })
 	> {
-		const role = this.resolveEffectiveRole(args.role);
 		const resultBundle = args.schema ? createResultTools(args.schema) : undefined;
 
 		return this.withScopedRuntime(
 			{
 				tools: args.tools ?? [],
-				role,
 				model: args.model,
 				thinkingLevel: args.thinkingLevel,
 				callSite: args.callSite,

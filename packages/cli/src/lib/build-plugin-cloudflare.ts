@@ -47,8 +47,7 @@ export class CloudflarePlugin implements BuildPlugin {
 	}
 
 	async generateEntryPoint(ctx: BuildContext): Promise<string> {
-		const { agents, roles, appEntry } = ctx;
-		const rolesJson = JSON.stringify(roles);
+		const { agents, appEntry } = ctx;
 		const manifestJson = JSON.stringify(ctx.manifest);
 		const runtimeVersion = JSON.stringify(ctx.runtimeVersion);
 		validateCloudflareAgentNames(ctx);
@@ -151,7 +150,6 @@ if (!hasRegisteredProvider('cloudflare')) {
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
-const roles = ${rolesJson};
 const skills = {};
 const systemPrompt = '';
 
@@ -265,7 +263,7 @@ function createContextForRequest(agentName, id, runId, payload, doInstance, req)
     env: doInstance?.env ?? {},
     req,
     agentConfig: {
-      systemPrompt, skills, roles, model: undefined, resolveModel,
+      systemPrompt, skills, model: undefined, resolveModel,
     },
     createDefaultEnv: (scope) => createDefaultEnv(scope, defaultWorkspaceStore),
     defaultStore,

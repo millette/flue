@@ -8,13 +8,13 @@ Agent framework where agents are directories compiled into deployable server art
 Agent (definition)              — `agents/<name>.ts`; named by its file
 └─ AgentInstance                — URL `<id>`; exposed to handlers as `ctx.id`
    └─ Run                       — one HTTP invocation; exposed as `ctx.runId`
-      └─ Harness                — one `init({ name })` call; defaults to `"default"`
+      └─ Harness                — one `agent.harness()` surface from `init({ name })`; defaults to `"default"`
          └─ Session             — one `harness.session(name?)`; defaults to `"default"`
             └─ Operation        — one `session.prompt` / `skill` / `task` / `shell` call
                └─ Turn          — one LLM round-trip inside pi-agent-core
 ```
 
-Use `harness` as the variable name for the return value of `init()`. Agents have names; agent instances have ids; harnesses and sessions have names; runs and operations have generated ids.
+Use `harness` as the variable name for the return value of `agent.harness()`. Agents have names; agent instances have ids; harnesses and sessions have names; runs and operations have generated ids.
 
 ## Project Structure
 
@@ -88,7 +88,7 @@ Examples (run from the `examples/hello-world/` directory so the `./.flue/` sourc
 ```
 cd examples/hello-world
 node ../../packages/cli/bin/flue.mjs run hello --target node --id test-1
-node ../../packages/cli/bin/flue.mjs run with-role --target node --id test-2 --payload '{"name": "Fred"}'
+node ../../packages/cli/bin/flue.mjs run with-inherit --target node --id test-2 --payload '{"name": "Fred"}'
 ```
 
 This builds the project, starts a temporary server, invokes the agent via SSE, streams output to stderr, prints the final result to stdout, and shuts down.

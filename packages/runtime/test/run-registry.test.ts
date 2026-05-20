@@ -268,7 +268,6 @@ describe('Bare /runs/:runId routes via flue()', () => {
 					agentConfig: {
 						systemPrompt: '',
 						skills: {},
-						roles: {},
 						model: undefined,
 						resolveModel: () => undefined,
 					},
@@ -396,7 +395,7 @@ describe('Bare /runs/:runId routes via flue()', () => {
 					payload,
 					env: {},
 					req,
-					agentConfig: { systemPrompt: '', skills: {}, roles: {}, model: undefined, resolveModel: () => undefined },
+					agentConfig: { systemPrompt: '', skills: {}, model: undefined, resolveModel: () => undefined },
 					createDefaultEnv: async () => bashFactoryToSessionEnv(async () => new Bash()),
 					defaultStore: new InMemorySessionStore(),
 					registrationStore: new InMemoryRegistrationStore(),
@@ -434,7 +433,7 @@ describe('Bare /runs/:runId routes via flue()', () => {
 					payload,
 					env: {},
 					req,
-					agentConfig: { systemPrompt: '', skills: {}, roles: {}, model: undefined, resolveModel: () => undefined },
+					agentConfig: { systemPrompt: '', skills: {}, model: undefined, resolveModel: () => undefined },
 					createDefaultEnv: async () => ({}) as never,
 					defaultStore: new InMemorySessionStore(),
 					registrationStore: new InMemoryRegistrationStore(),
@@ -484,7 +483,7 @@ describe('Bare /runs/:runId routes via flue()', () => {
 					payload,
 					env: {},
 					req,
-					agentConfig: { systemPrompt: '', skills: {}, roles: {}, model: undefined, resolveModel: () => undefined },
+					agentConfig: { systemPrompt: '', skills: {}, model: undefined, resolveModel: () => undefined },
 					createDefaultEnv: async () => bashFactoryToSessionEnv(async () => new Bash()),
 					defaultStore: new InMemorySessionStore(),
 					registrationStore: new InMemoryRegistrationStore(),
@@ -536,7 +535,7 @@ describe('Bare /runs/:runId routes via flue()', () => {
 					payload,
 					env: {},
 					req,
-					agentConfig: { systemPrompt: '', skills: {}, roles: {}, model: undefined, resolveModel: () => undefined },
+					agentConfig: { systemPrompt: '', skills: {}, model: undefined, resolveModel: () => undefined },
 					createDefaultEnv: async () => bashFactoryToSessionEnv(async () => new Bash()),
 					defaultStore: new InMemorySessionStore(),
 					registrationStore: new InMemoryRegistrationStore(),
@@ -580,7 +579,7 @@ describe('Bare /runs/:runId routes via flue()', () => {
 					payload,
 					env: {},
 					req,
-					agentConfig: { systemPrompt: '', skills: {}, roles: {}, model: undefined, resolveModel: () => undefined },
+					agentConfig: { systemPrompt: '', skills: {}, model: undefined, resolveModel: () => undefined },
 					createDefaultEnv: async () => ({}) as never,
 					defaultStore: new InMemorySessionStore(),
 					registrationStore: new InMemoryRegistrationStore(),
@@ -618,7 +617,6 @@ describe('Bare /runs/:runId routes via flue()', () => {
 					agentConfig: {
 						systemPrompt: '',
 						skills: {},
-						roles: {},
 						model: undefined,
 						resolveModel: () => undefined,
 					},
@@ -720,7 +718,6 @@ describe('Bare /runs/:runId routes via flue()', () => {
 			agentConfig: {
 				systemPrompt: '',
 				skills: {},
-				roles: {},
 				model: undefined,
 				resolveModel: () => undefined,
 			},
@@ -778,7 +775,6 @@ describe('Bare /runs/:runId routes via flue()', () => {
 			agentConfig: {
 				systemPrompt: '',
 				skills: {},
-				roles: {},
 				model: undefined,
 				resolveModel: () => undefined,
 			},
@@ -834,7 +830,6 @@ describe('Bare /runs/:runId routes via flue()', () => {
 			agentConfig: {
 				systemPrompt: '',
 				skills: {},
-				roles: {},
 				model: undefined,
 				resolveModel: () => undefined,
 			},
@@ -894,7 +889,6 @@ describe('Bare /runs/:runId routes via flue()', () => {
 		const baseAgentConfig: AgentConfig = {
 			systemPrompt: '',
 			skills: {},
-			roles: {},
 			model: undefined,
 			thinkingLevel: 'medium',
 			compaction: { reserveTokens: 1 },
@@ -969,7 +963,6 @@ describe('Bare /runs/:runId routes via flue()', () => {
 			agentConfig: {
 				systemPrompt: '',
 				skills: {},
-				roles: {},
 				model: undefined,
 				resolveModel: () => undefined,
 			},
@@ -1024,7 +1017,6 @@ describe('Bare /runs/:runId routes via flue()', () => {
 			agentConfig: {
 				systemPrompt: '',
 				skills: {},
-				roles: {},
 				model: undefined,
 				resolveModel: () => undefined,
 			},
@@ -1076,7 +1068,6 @@ describe('Bare /runs/:runId routes via flue()', () => {
 			agentConfig: {
 				systemPrompt: '',
 				skills: {},
-				roles: {},
 				model: undefined,
 				resolveModel: () => undefined,
 			},
@@ -1099,7 +1090,6 @@ describe('Bare /runs/:runId routes via flue()', () => {
 			agentConfig: {
 				systemPrompt: '',
 				skills: {},
-				roles: {},
 				model: undefined,
 				resolveModel: () => undefined,
 			},
@@ -1152,7 +1142,6 @@ describe('Bare /runs/:runId routes via flue()', () => {
 					agentConfig: {
 						systemPrompt: '',
 						skills: {},
-						roles: {},
 						model: undefined,
 						resolveModel: () => undefined,
 					},
@@ -1226,7 +1215,6 @@ describe('Bare /runs/:runId routes via flue()', () => {
 					agentConfig: {
 						systemPrompt: '',
 						skills: {},
-						roles: {},
 						model: undefined,
 						resolveModel: () => undefined,
 					},
@@ -1303,7 +1291,6 @@ describe('Bare /runs/:runId routes via flue()', () => {
 					agentConfig: {
 						systemPrompt: '',
 						skills: {},
-						roles: {},
 						model: undefined,
 						resolveModel: () => undefined,
 					},
@@ -1395,7 +1382,6 @@ describe('admin() routes', () => {
 					agentConfig: {
 						systemPrompt: '',
 						skills: {},
-						roles: {},
 						model: undefined,
 						resolveModel: () => undefined,
 					},

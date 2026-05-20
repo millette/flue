@@ -4,10 +4,9 @@ import * as v from 'valibot';
 export const triggers = { webhook: true };
 
 /**
- * Demonstrates the three layers at which `thinkingLevel` can be set:
+ * Demonstrates the two layers at which `thinkingLevel` can be set:
  *   1. harness default   — `init({ thinkingLevel: 'low' })`
- *   2. role override     — `roles/auditor.md` sets `thinkingLevel: high`
- *   3. per-call override — `prompt(..., { thinkingLevel: 'minimal' })`
+ *   2. per-call override — `prompt(..., { thinkingLevel: 'minimal' })`
  *
  * One deployment, multiple reasoning tiers.
  */
@@ -25,15 +24,13 @@ export default async function ({ init }: FlueContext) {
 	// 1. Harness default applies.
 	const fast = await session.prompt('In one word: capital of France?', { result: Answer });
 
-	// 2. Role overrides the harness default.
 	const careful = await session.prompt('Is 1009 prime? Justify briefly.', {
-		role: 'auditor',
+		thinkingLevel: 'high',
 		result: Answer,
 	});
 
-	// 3. Per-call override beats both harness default and role.
+	// 2. Per-call override beats the harness default.
 	const minimal = await session.prompt('Echo back: hello', {
-		role: 'auditor',
 		thinkingLevel: 'minimal',
 		result: Answer,
 	});

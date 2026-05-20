@@ -1,7 +1,6 @@
 import { discoverSessionContext } from './context.ts';
 import { AgentBusyError } from './errors.ts';
 import { Harness } from './harness.ts';
-import { assertRoleExists } from './roles.ts';
 import type { DefaultWorkspaceScope } from './runtime/default-workspace-store.ts';
 import { dispatchGlobalEvent } from './runtime/events.ts';
 import type { RegistrationStore } from './runtime/registration-store.ts';
@@ -158,7 +157,6 @@ export function createFlueContext(config: FlueContextConfig): FlueContextInterna
 			initializedHarnessNames.add(name);
 
 			try {
-				assertRoleExists(config.agentConfig.roles, resolvedOptions.role);
 				const sandbox = resolvedOptions.sandbox;
 				const { env: baseEnv, toolFactory } = await resolveSessionEnv(
 					config.agentName,
@@ -189,7 +187,6 @@ export function createFlueContext(config: FlueContextConfig): FlueContextInterna
 					definitionSkills: definition.skills,
 					skills: localContext.skills,
 					model: agentModel,
-					role: resolvedOptions.role ?? config.agentConfig.role,
 					thinkingLevel: definition.thinkingLevel ?? config.agentConfig.thinkingLevel,
 					compaction: definition.compaction ?? config.agentConfig.compaction,
 				};
