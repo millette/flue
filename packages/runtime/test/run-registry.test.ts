@@ -759,6 +759,68 @@ describe('Bare /runs/:runId routes via flue()', () => {
 		]);
 	});
 
+	it('routes send through the harness configured from inherited agent defaults', async () => {
+		const inheritedTool: ToolDefinition = {
+			name: 'lookup',
+			description: 'Look up a value.',
+			parameters: {},
+			execute: async () => 'ok',
+		};
+		const ctx = createFlueContext({
+			agentName: 'hello',
+			id: 'inst-1',
+			runId: 'run-send-definition',
+			payload: {},
+			env: {},
+			createDefaultEnv: async () => bashFactoryToSessionEnv(async () => new Bash()),
+			defaultStore: new InMemorySessionStore(),
+			registrationStore: new InMemoryRegistrationStore(),
+			agentConfig: {
+				systemPrompt: '',
+				skills: {},
+				roles: {},
+				model: undefined,
+				resolveModel: () => undefined,
+			},
+		});
+		const agent = await ctx.init({
+			inherit: {
+				model: false,
+				instructions: 'Inherited send instructions.',
+				skills: [{ name: 'review', description: 'Review work.' }],
+				tools: [inheritedTool],
+				thinkingLevel: 'high',
+				compaction: false,
+			},
+		});
+		const harness = agent.harness() as unknown as {
+			config: AgentConfig;
+			agentTools: ToolDefinition[];
+			session(name?: string): Promise<FlueSession>;
+		};
+		let sawDefinition = false;
+		const originalSession = harness.session.bind(harness);
+		harness.session = async (name?: string) => {
+			expect(name).toBeUndefined();
+			expect(harness.config.systemPrompt).toContain('Inherited send instructions.');
+			expect(harness.config.systemPrompt).toContain('**review** — Review work.');
+			expect(harness.config.thinkingLevel).toBe('high');
+			expect(harness.config.compaction).toBe(false);
+			expect(harness.agentTools).toEqual([inheritedTool]);
+			sawDefinition = true;
+			return {
+				prompt() {
+					return Promise.resolve({}) as never;
+				},
+			} as unknown as FlueSession;
+		};
+
+		agent.send('hello');
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(sawDefinition).toBe(true);
+		harness.session = originalSession;
+	});
+
 	it('logs detached send failures and clears the busy flag afterward', async () => {
 		const ctx = createFlueContext({
 			agentName: 'hello',
