@@ -22,3 +22,7 @@ export type { CloudflareGatewayOptions } from './gateway.ts';
 
 export { FlueRegistry } from './registry-do.ts';
 export { createCloudflareRunRegistry } from './run-registry.ts';
+export {
+	createDurableInstanceRunAdmission,
+	releaseDurableInstanceRunAdmission,
+} from './instance-admission.ts';

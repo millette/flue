@@ -102,6 +102,7 @@ import { Bash, InMemoryFs } from 'just-bash';
 import {
   createFlueContext,
   InMemorySessionStore,
+  InMemoryInstanceRunAdmission,
   InMemoryRunStore,
   createDurableRunStore,
   createRunSubscriberRegistry,
@@ -119,6 +120,8 @@ import {
   getCloudflareAIBindingApiProvider,
   FlueRegistry,
   createCloudflareRunRegistry,
+  createDurableInstanceRunAdmission,
+  releaseDurableInstanceRunAdmission,
 } from '@flue/runtime/cloudflare';
 import { registerApiProvider, registerProvider } from '@flue/runtime/app';
 
@@ -204,6 +207,7 @@ function resolveSandbox(sandbox) {
 
 // Fallback in-memory store (used if no DO storage is available).
 const memoryStore = new InMemorySessionStore();
+const memoryInstanceAdmission = new InMemoryInstanceRunAdmission();
 const memoryRunStore = new InMemoryRunStore();
 
 // Module-scoped per-isolate registry; run ids isolate buckets across DOs.
@@ -261,6 +265,12 @@ function createRunStoreForRequest(doInstance) {
     : memoryRunStore;
 }
 
+function createInstanceAdmissionForRequest(doInstance) {
+  return doInstance?.ctx?.storage?.sql
+    ? createDurableInstanceRunAdmission(doInstance.ctx.storage.sql)
+    : memoryInstanceAdmission;
+}
+
 function createRunRegistryForRequest(reqEnv) {
   return createCloudflareRunRegistry(reqEnv?.FLUE_REGISTRY);
 }
@@ -292,9 +302,25 @@ function assertAgentsDurabilityApi(doInstance, method) {
 	}
 }
 
-async function handleFlueFiberRecovered(ctx, _doInstance, agentName) {
+async function handleFlueFiberRecovered(ctx, doInstance, agentName) {
   if (!ctx.name || !ctx.name.startsWith('flue:')) return;
   console.warn('[flue] Cloudflare fiber interrupted:', agentName, ctx.name, ctx.snapshot ?? null);
+  const snapshot = ctx.snapshot;
+  const sql = doInstance?.ctx?.storage?.sql;
+  if (
+    sql &&
+    snapshot &&
+    snapshot.kind === 'webhook' &&
+    typeof snapshot.agentName === 'string' &&
+    typeof snapshot.id === 'string' &&
+    typeof snapshot.runId === 'string'
+  ) {
+    releaseDurableInstanceRunAdmission(sql, {
+      agentName: snapshot.agentName,
+      instanceId: snapshot.id,
+      runId: snapshot.runId,
+    });
+  }
 }
 
 // ─── Per-DO Dispatch ───────────────────────────────────────────────────────
@@ -319,6 +345,7 @@ async function dispatchAgent(request, doInstance, agentName, handler) {
     id,
     handler,
     runStore: createRunStoreForRequest(doInstance),
+    instanceAdmission: createInstanceAdmissionForRequest(doInstance),
     runSubscribers,
     runRegistry: createRunRegistryForRequest(doInstance.env),
     createContext: (id_, runId, payload, req) => createContextForRequest(id_, runId, payload, doInstance, req),

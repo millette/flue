@@ -1,9 +1,10 @@
 /** Shared per-agent HTTP dispatcher for the Node and Cloudflare targets. */
 
 import type { FlueContextInternal } from '../client.ts';
-import { parseJsonBody, toHttpResponse } from '../errors.ts';
+import { InstanceBusyError, parseJsonBody, toHttpResponse } from '../errors.ts';
 import type { FlueEvent } from '../types.ts';
 import { generateRunId } from './ids.ts';
+import type { InstanceRunAdmission, InstanceRunLease } from './instance-admission.ts';
 import type { RunRegistry } from './run-registry.ts';
 import type { RunStore } from './run-store.ts';
 import type { RunSubscriberRegistry } from './run-subscribers.ts';
@@ -81,13 +82,10 @@ export interface HandleAgentOptions {
 	runHandler?: RunHandlerFn;
 	/** Per-target run history store. If omitted, run persistence is disabled. */
 	runStore?: RunStore;
-	/**
-	 * Per-target in-process subscriber registry used by the run-stream
-	 * route to live-tail an active run. Optional — if omitted, the run
-	 * still produces events and is persisted, but live-tail subscribers
-	 * see only what's already in the store at the moment they connect.
-	 */
+	/** Per-target admission lane for serializing runs by agent instance. */
+	instanceAdmission?: InstanceRunAdmission;
 	runSubscribers?: RunSubscriberRegistry;
+
 	/**
 	 * Per-target cross-deployment pointer index. Receives a
 	 * `recordRunStart` after every successful `createRun` and a
@@ -121,11 +119,30 @@ export interface HandleAgentOptions {
  * already been validated as a POST against a registered agent.
  */
 export async function handleAgentRequest(opts: HandleAgentOptions): Promise<Response> {
-	const { request, agentName, id, handler, createContext, runStore, runSubscribers, runRegistry } =
-		opts;
+	const {
+		request,
+		agentName,
+		id,
+		handler,
+		createContext,
+		runStore,
+		instanceAdmission,
+		runSubscribers,
+		runRegistry,
+	} = opts;
 	const startWebhook = opts.startWebhook ?? defaultStartWebhook;
 	const runHandler = opts.runHandler ?? defaultRunHandler;
 	const runId = generateRunId();
+
+	const acquiredLease = instanceAdmission
+		? await instanceAdmission.acquire({ agentName, instanceId: id, runId })
+		: undefined;
+	if (instanceAdmission && !acquiredLease) {
+		const response = toHttpResponse(new InstanceBusyError({ name: agentName, id }));
+		response.headers.set('X-Flue-Run-Id', runId);
+		return response;
+	}
+	const lease = acquiredLease ?? undefined;
 
 	try {
 		// Parse the request body. Throws on invalid Content-Type or malformed
@@ -138,19 +155,25 @@ export async function handleAgentRequest(opts: HandleAgentOptions): Promise<Resp
 		const isSSE = accept.includes('text/event-stream') && !isWebhook;
 
 		if (isWebhook) {
-			return runWebhookMode({
-				agentName,
-				id,
-				runId,
-				handler,
-				payload,
-				request,
-				createContext,
-				startWebhook,
-				runStore,
-				runSubscribers,
-				runRegistry,
-			});
+			try {
+				return await runWebhookMode({
+					agentName,
+					id,
+					runId,
+					handler,
+					payload,
+					request,
+					createContext,
+					startWebhook,
+					runStore,
+					lease,
+					runSubscribers,
+					runRegistry,
+				});
+			} catch (error) {
+				await lease?.release();
+				throw error;
+			}
 		}
 
 		if (isSSE) {
@@ -164,25 +187,33 @@ export async function handleAgentRequest(opts: HandleAgentOptions): Promise<Resp
 				createContext,
 				runHandler,
 				runStore,
+				lease,
 				runSubscribers,
 				runRegistry,
 			});
 		}
 
-		return runSyncMode({
-			agentName,
-			id,
-			runId,
-			handler,
-			payload,
-			request,
-			createContext,
-			runHandler,
-			runStore,
-			runSubscribers,
-			runRegistry,
-		});
+		try {
+			return await runSyncMode({
+				agentName,
+				id,
+				runId,
+				handler,
+				payload,
+				request,
+				createContext,
+				runHandler,
+				runStore,
+				lease,
+				runSubscribers,
+				runRegistry,
+			});
+		} catch (error) {
+			await lease?.release();
+			throw error;
+		}
 	} catch (err) {
+		await lease?.release();
 		// toHttpResponse logs unknowns via flueLog.error — no extra console.error
 		// needed at this layer.
 		const response = toHttpResponse(err);
@@ -203,6 +234,7 @@ interface ModeOptions {
 	createContext: CreateContextFn;
 	runHandler: RunHandlerFn;
 	runStore?: RunStore;
+	lease?: InstanceRunLease;
 	runSubscribers?: RunSubscriberRegistry;
 	runRegistry?: RunRegistry;
 }
@@ -217,6 +249,7 @@ interface WebhookOptions {
 	createContext: CreateContextFn;
 	startWebhook: StartWebhookFn;
 	runStore?: RunStore;
+	lease?: InstanceRunLease;
 	runSubscribers?: RunSubscriberRegistry;
 	runRegistry?: RunRegistry;
 }
@@ -232,6 +265,7 @@ async function runWebhookMode(opts: WebhookOptions): Promise<Response> {
 		createContext,
 		startWebhook,
 		runStore,
+		lease,
 		runSubscribers,
 		runRegistry,
 	} = opts;
@@ -246,24 +280,41 @@ async function runWebhookMode(opts: WebhookOptions): Promise<Response> {
 		request,
 		createContext,
 		runStore,
+		lease,
 		runSubscribers,
 		runRegistry,
 	});
 	const { ctx } = lifecycle;
-	const run = async (): Promise<unknown> => withRunLifecycle(lifecycle, () => handler(ctx));
+	let didStartRun = false;
+	const run = async (): Promise<unknown> => {
+		didStartRun = true;
+		return withRunLifecycle(lifecycle, () => handler(ctx));
+	};
 
-	startWebhook(runId, run).then(
-		(result) => {
-			console.log(
-				'[flue] Webhook handler complete:',
-				agentName,
-				result !== undefined ? JSON.stringify(result) : '(no return)',
-			);
-		},
-		(err) => {
-			console.error('[flue] Webhook handler error:', agentName, err);
-		},
-	);
+	try {
+		startWebhook(runId, run).then(
+			(result) => {
+				console.log(
+					'[flue] Webhook handler complete:',
+					agentName,
+					result !== undefined ? JSON.stringify(result) : '(no return)',
+				);
+			},
+			async (err) => {
+				console.error('[flue] Webhook handler error:', agentName, err);
+				if (!didStartRun) {
+					await emitRunEnd(lifecycle, { isError: true, error: err });
+					await lease?.release();
+				}
+			},
+		);
+	} catch (error) {
+		if (!didStartRun) {
+			await emitRunEnd(lifecycle, { isError: true, error });
+			await lease?.release();
+		}
+		throw error;
+	}
 
 	return new Response(JSON.stringify({ status: 'accepted', runId }), {
 		status: 202,
@@ -287,6 +338,7 @@ function runSseMode(opts: ModeOptions): Response {
 		createContext,
 		runHandler,
 		runStore,
+		lease,
 		runSubscribers,
 		runRegistry,
 	} = opts;
@@ -326,37 +378,42 @@ function runSseMode(opts: ModeOptions): Response {
 	}, SSE_HEARTBEAT_MS);
 
 	(async () => {
-		const lifecycle = await createRunLifecycle({
-			agentName,
-			id,
-			runId,
-			payload,
-			request,
-			createContext,
-			runStore,
-			runSubscribers,
-			runRegistry,
-		});
-		const { ctx } = lifecycle;
-		ctx.setEventCallback((event) => {
-			if (event.type === 'idle') isIdle = true;
-			writeSSE(event, event.type).catch(() => {});
-		});
-
+		let lifecycle: RunLifecycle | undefined;
 		try {
-			await withRunLifecycle(lifecycle, async () => {
-				try {
-					return await runHandler(ctx, handler);
-				} finally {
-					// Keep idle before the terminal run event on the SSE wire.
-					if (!isIdle) ctx.emitEvent({ type: 'idle' });
-				}
+			lifecycle = await createRunLifecycle({
+				agentName,
+				id,
+				runId,
+				payload,
+				request,
+				createContext,
+				runStore,
+				lease,
+				runSubscribers,
+				runRegistry,
 			});
-		} catch {
-			// The lifecycle wrapper has already emitted the terminal event.
+			const { ctx } = lifecycle;
+			ctx.setEventCallback((event) => {
+				if (event.type === 'idle') isIdle = true;
+				writeSSE(event, event.type).catch(() => {});
+			});
+
+			try {
+				await withRunLifecycle(lifecycle, async () => {
+					try {
+						return await runHandler(ctx, handler);
+					} finally {
+						// Keep idle before the terminal run event on the SSE wire.
+						if (!isIdle) ctx.emitEvent({ type: 'idle' });
+					}
+				});
+			} catch {
+				// The lifecycle wrapper has already emitted the terminal event.
+			}
 		} finally {
+			if (!lifecycle) await lease?.release();
 			clearInterval(heartbeat);
-			ctx.setEventCallback(undefined);
+			lifecycle?.ctx.setEventCallback(undefined);
 			closed = true;
 			try {
 				await writer.close();
@@ -387,6 +444,7 @@ async function runSyncMode(opts: ModeOptions): Promise<Response> {
 		createContext,
 		runHandler,
 		runStore,
+		lease,
 		runSubscribers,
 		runRegistry,
 	} = opts;
@@ -398,6 +456,7 @@ async function runSyncMode(opts: ModeOptions): Promise<Response> {
 		request,
 		createContext,
 		runStore,
+		lease,
 		runSubscribers,
 		runRegistry,
 	});
@@ -423,6 +482,7 @@ interface RunLifecycleOptions {
 	request: Request;
 	createContext: CreateContextFn;
 	runStore?: RunStore;
+	lease?: InstanceRunLease;
 	runSubscribers?: RunSubscriberRegistry;
 	runRegistry?: RunRegistry;
 }
@@ -478,6 +538,8 @@ async function withRunLifecycle<T>(
 		await flushFanout();
 		await emitRunEnd(lifecycle, { isError: true, error });
 		throw error;
+	} finally {
+		await lifecycle.lease?.release();
 	}
 }
 

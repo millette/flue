@@ -53,6 +53,7 @@ import { Bash, InMemoryFs } from 'just-bash';
 import {
   createFlueContext,
   InMemorySessionStore,
+  InMemoryInstanceRunAdmission,
   InMemoryRunStore,
   InMemoryRunRegistry,
   createRunSubscriberRegistry,
@@ -101,6 +102,7 @@ async function createDefaultEnv() {
 
 // Default persistence store for Node — in-memory, process lifetime.
 const defaultStore = new InMemorySessionStore();
+const instanceAdmission = new InMemoryInstanceRunAdmission();
 const runStore = new InMemoryRunStore();
 const runRegistry = new InMemoryRunRegistry();
 const runSubscribers = createRunSubscriberRegistry();
@@ -137,6 +139,7 @@ configureFlueRuntime({
   handlers,
   createContext: createContextForRequest,
   runStore,
+  instanceAdmission,
   runSubscribers,
   runRegistry,
 });

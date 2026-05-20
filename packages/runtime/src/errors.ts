@@ -354,6 +354,18 @@ export class RunRegistryUnavailableError extends FlueHttpError {
 	}
 }
 
+export class InstanceBusyError extends FlueHttpError {
+	constructor({ name, id }: { name: string; id: string }) {
+		super({
+			type: 'instance_busy',
+			message: `Agent instance "${name}/${id}" is already running.`,
+			details: 'Wait for the active invocation to finish before sending another request for this instance.',
+			dev: '',
+			status: 409,
+		});
+	}
+}
+
 export class InvalidRequestError extends FlueHttpError {
 	constructor({ reason }: { reason: string }) {
 		super({

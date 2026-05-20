@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
+import { createDurableInstanceRunAdmission } from '../src/cloudflare/instance-admission.ts';
 import {
 	createRegistryOps,
 	handleRegistryRequest,
@@ -32,6 +33,17 @@ const STARTED_AT_1 = '2026-05-13T10:00:00.000Z';
 const STARTED_AT_2 = '2026-05-13T10:01:00.000Z';
 const STARTED_AT_3 = '2026-05-13T10:02:00.000Z';
 const ENDED_AT = '2026-05-13T10:03:00.000Z';
+
+describe('createDurableInstanceRunAdmission', () => {
+	it('admits one active run per agent instance and releases leases', async () => {
+		const admission = createDurableInstanceRunAdmission(makeFakeSql());
+		const lease = await admission.acquire({ agentName: 'hello', instanceId: 'inst_a', runId: 'run_1' });
+		expect(lease).not.toBeNull();
+		expect(await admission.acquire({ agentName: 'hello', instanceId: 'inst_a', runId: 'run_2' })).toBeNull();
+		await lease?.release();
+		expect(await admission.acquire({ agentName: 'hello', instanceId: 'inst_a', runId: 'run_3' })).not.toBeNull();
+	});
+});
 
 describe('createRegistryOps (SQL paths)', () => {
 	it('round-trips a pointer through recordRunStart + lookupRun', () => {

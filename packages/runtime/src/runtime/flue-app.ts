@@ -24,6 +24,7 @@ import {
 	type StartWebhookFn,
 } from './handle-agent.ts';
 import { type HandleRunRouteOptions, handleRunRouteRequest } from './handle-run-routes.ts';
+import type { InstanceRunAdmission } from './instance-admission.ts';
 import type { RunRegistry } from './run-registry.ts';
 import type { RunStore } from './run-store.ts';
 import type { RunSubscriberRegistry } from './run-subscribers.ts';
@@ -78,6 +79,8 @@ export interface FlueRuntime {
 
 	/** Node run history store. */
 	runStore?: RunStore;
+	/** Node process-local per-instance run admission lane. */
+	instanceAdmission?: InstanceRunAdmission;
 
 	/** Node in-process registry used for live run-stream tailing. */
 	runSubscribers?: RunSubscriberRegistry;
@@ -355,6 +358,7 @@ const agentRouteHandler: MiddlewareHandler = async (c) => {
 			startWebhook: rt.startWebhook,
 			runHandler: rt.runHandler,
 			runStore: rt.runStore,
+			instanceAdmission: rt.instanceAdmission,
 			runSubscribers: rt.runSubscribers,
 			runRegistry: rt.runRegistry,
 		});

@@ -5,6 +5,7 @@ import {
 	configureFlueRuntime,
 	createFlueContext,
 	createRunSubscriberRegistry,
+	InMemoryInstanceRunAdmission,
 	InMemoryRunRegistry,
 	InMemoryRunStore,
 	InMemorySessionStore,
@@ -354,6 +355,45 @@ describe('Bare /runs/:runId routes via flue()', () => {
 			| { 'x-flue-streaming'?: boolean }
 			| undefined;
 		expect(streamOp?.['x-flue-streaming']).toBe(true);
+	});
+
+	it('rejects overlapping runs for the same instance and releases afterward', async () => {
+		const instanceAdmission = new InMemoryInstanceRunAdmission();
+		let releaseRun: (() => void) | undefined;
+		const wait = new Promise<void>((resolve) => {
+			releaseRun = resolve;
+		});
+
+		configureFlueRuntime({
+			target: 'node',
+			webhookAgents: ['hello'],
+			allowNonWebhook: false,
+			handlers: { hello: async () => wait },
+			createContext: (id, runId, payload, req) =>
+				createFlueContext({
+					id,
+					runId,
+					payload,
+					env: {},
+					req,
+					agentConfig: { systemPrompt: '', skills: {}, roles: {}, model: undefined, resolveModel: () => undefined },
+					createDefaultEnv: async () => ({}) as never,
+					defaultStore: new InMemorySessionStore(),
+				}),
+			instanceAdmission,
+		});
+
+		const app = new Hono();
+		app.route('/', flue());
+		const first = app.fetch(new Request('http://localhost/agents/hello/inst-1', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }));
+		await Promise.resolve();
+		const second = await app.fetch(new Request('http://localhost/agents/hello/inst-1', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }));
+		expect(second.status).toBe(409);
+		expect(((await second.json()) as { error?: { type?: string } }).error?.type).toBe('instance_busy');
+		releaseRun?.();
+		expect((await first).status).toBe(200);
+		const third = await app.fetch(new Request('http://localhost/agents/hello/inst-1', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }));
+		expect(third.status).toBe(200);
 	});
 
 	it('surfaces a structured 501 envelope when runRegistry is not configured', async () => {

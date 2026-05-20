@@ -13,7 +13,7 @@ export const triggers = { webhook: true };
  * (e.g. future cron / queue triggers). Today every trigger is HTTP, so in
  * practice it's always defined.
  */
-export default async function ({ req, init }: FlueContext) {
+export default async function ({ req, init, payload }: FlueContext<{ delayMs?: number }>) {
 	console.log('[with-request] method:', req?.method);
 	console.log('[with-request] url:', req?.url);
 	console.log('[with-request] user-agent:', req?.headers.get('user-agent'));
@@ -35,6 +35,11 @@ export default async function ({ req, init }: FlueContext) {
 	// Light-touch authorization check. Real auth schemes (bearer tokens, HMAC,
 	// platform-issued JWTs) verify the header against a secret in `ctx.env`.
 	// Here we just demo reading the header and returning early when absent.
+	const delayMs = payload?.delayMs;
+	if (typeof delayMs === 'number' && delayMs > 0) {
+		await new Promise((resolve) => setTimeout(resolve, delayMs));
+	}
+
 	const authHeader = req?.headers.get('authorization');
 	if (!authHeader) {
 		console.log('[with-request] no authorization header — skipping LLM call');
