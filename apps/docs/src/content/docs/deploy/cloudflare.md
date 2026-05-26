@@ -415,13 +415,16 @@ A deployment or code update can reset a Durable Object while an operation is run
 | --- | --- |
 | Direct attached agent HTTP/WebSocket prompt | No public agent run exists. If the attached request or socket is interrupted, Flue does not provide a run-resume API. |
 | Dispatched agent input | Durable delivery and deduplication are keyed by `dispatchId` and persisted session/delivery state, not by a run. |
-| Flue workflow invocation | Flue terminalizes the interrupted attempt and restarts the workflow from its persisted payload as a new linked run. |
+| Flue HTTP workflow invocation (`202`, SSE, or `?wait=result`) | Flue terminalizes the interrupted attempt and attempts to restart the workflow from its persisted payload as a new linked run. An attached SSE or synchronous response may fail; replacement work proceeds detached. |
+| Flue workflow WebSocket interaction | Outside the HTTP workflow durable-admission guarantee; an interrupted socket is not transparently resumed. |
+
+All Cloudflare HTTP workflow response modes use the same Fiber-backed durable admission path. The response mode controls only how the initiating caller observes the admitted run: immediate `202`, live SSE, or a synchronous result while the request remains connected.
 
 Recovery is **at-least-once** where durable asynchronous processing or workflow restart applies. An interruption after an external action has begun can cause that action to execute again. For dispatched agent work, use `dispatchId` or an application-level idempotency key when coordinating external side effects. Direct attached prompts do not expose a run identifier. Because restarted workflows receive a new `runId`, workflow code should use an application-level idempotency key that remains stable across attempts.
 
-Flue persists workflow invocation payloads with workflow run records so interrupted executions can restart and operators can inspect their original input through workflow run APIs. Workflow attempt records expose `restartedAsRunId` and `restartedFromRunId` links between interrupted and replacement attempts. Dispatched agent inputs are persisted as delivery/session state correlated by `dispatchId`, not as agent runs. Treat persisted inputs as durable application data: do not submit secrets or sensitive values unless your application retention and access policy permits storing them.
+Flue persists HTTP workflow invocation payloads with workflow run records before admitted work starts so interrupted executions can restart and operators can inspect their original input through workflow run APIs. Workflow attempt records expose `restartedAsRunId` and `restartedFromRunId` links between interrupted and replacement attempts. Replacement admission is currently attempted once; a transient failure while submitting the replacement can still prevent recovery. Dispatched agent inputs are persisted as delivery/session state correlated by `dispatchId`, not as agent runs. Treat persisted inputs as durable application data: do not submit secrets or sensitive values unless your application retention and access policy permits storing them.
 
-Flue workflows restart from the beginning after Durable Object interruption; they do not resume from checkpointed durable steps. For jobs that require durable step-level continuation rather than whole-invocation retry, implement those steps with [Cloudflare Workflows](https://developers.cloudflare.com/workflows/).
+Flue HTTP workflows restart from the beginning after Durable Object interruption; they do not resume from checkpointed durable steps. For jobs that require durable step-level continuation rather than whole-invocation retry, implement those steps with [Cloudflare Workflows](https://developers.cloudflare.com/workflows/).
 
 ## Sandbox context
 
