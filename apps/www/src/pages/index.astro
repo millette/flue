@@ -121,7 +121,7 @@ const floatingSquares = [
           Not another SDK. Build autonomous agents and powerful AI workflows with Flue's programmable TypeScript harness.
         </p>
         <div class="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <div id="copy-prompt-shell" class="group/copy relative" data-feedback="false">
+          <div id="copy-prompt-shell" class="group/copy relative" data-feedback="false" data-copy-error="false">
             <button id="copy-prompt-btn" type="button" class="group inline-flex items-center gap-2.5 bg-gray-950 hover:bg-gray-800 rounded-full px-5 py-3 text-sm font-medium text-white transition-colors cursor-pointer">
               <span class="relative flex items-center justify-start shrink-0 text-white w-[94px] h-5" aria-hidden="true">
                 <svg class="w-5 h-5 transition-transform duration-300 ease-out -rotate-6 group-hover:-rotate-12 group-hover:-translate-x-1" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" xmlns="http://www.w3.org/2000/svg"><path d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z"/></svg>
@@ -138,8 +138,10 @@ const floatingSquares = [
                   <span>{COPY_PROMPT}<span class="relative top-px ml-1 text-sm leading-none text-blue-300">&rdquo;</span></span>
                 </span>
                 <span id="copy-prompt-feedback" class="absolute left-0 top-0 inline-flex translate-y-1 items-center gap-1 opacity-0 transition-all duration-200 ease-out group-data-[feedback=true]/copy:translate-y-0 group-data-[feedback=true]/copy:opacity-100">
-                  <span id="copy-prompt-indicator" class="inline-flex w-3 shrink-0 justify-center text-blue-500">&#x2713;</span>
-                  <span id="copy-prompt-message" class="text-blue-600">Copied — now paste that into your coding agent to get started!</span>
+                  <span class="inline-flex w-3 shrink-0 justify-center text-blue-500 group-data-[copy-error=true]/copy:hidden">&#x2713;</span>
+                  <span class="hidden w-3 shrink-0 justify-center text-gray-500 group-data-[copy-error=true]/copy:inline-flex">!</span>
+                  <span class="text-blue-600 group-data-[copy-error=true]/copy:hidden">Copied — now paste that into your coding agent for a guided walkthrough!</span>
+                  <span class="hidden text-gray-600 group-data-[copy-error=true]/copy:inline">Could not copy prompt</span>
                 </span>
               </span>
             </span>
@@ -372,7 +374,7 @@ const floatingSquares = [
         </div>
 
         <div class="mt-10 grid lg:grid-cols-6 gap-5">
-          <a href="#" class="lg:col-span-3 bg-white flex flex-col transition-colors hover:bg-gray-50 [&>div]:transition-colors hover:[&>div]:border-gray-400">
+          <a href="/docs/concepts/agents/" class="lg:col-span-3 bg-white flex flex-col transition-colors hover:bg-gray-50 [&>div]:transition-colors hover:[&>div]:border-gray-400">
             <div class="relative flex h-[184px] items-center justify-center overflow-hidden border border-slate-300 bg-[#e9eef4]">
               <svg class="absolute inset-0 h-full w-full" aria-hidden="true">
                 <defs>
@@ -390,7 +392,7 @@ const floatingSquares = [
             </div>
           </a>
 
-          <a href="#" class="lg:col-span-3 bg-white flex flex-col transition-colors hover:bg-gray-50 [&>div]:transition-colors hover:[&>div]:border-gray-400">
+          <a href="/docs/guide/workflows/" class="lg:col-span-3 bg-white flex flex-col transition-colors hover:bg-gray-50 [&>div]:transition-colors hover:[&>div]:border-gray-400">
             <div class="relative flex h-[184px] items-center justify-center overflow-hidden border border-slate-300 bg-[#e9eef4]">
               <svg class="absolute inset-0 h-full w-full" aria-hidden="true">
                 <defs>
@@ -408,47 +410,47 @@ const floatingSquares = [
             </div>
           </a>
 
-          <a href="#" class="lg:col-span-2 border border-gray-300 bg-white p-6 transition-colors hover:border-gray-400 hover:bg-gray-50">
+          <a href="/docs/guide/sandboxes/" class="lg:col-span-2 border border-gray-300 bg-white p-6 transition-colors hover:border-gray-400 hover:bg-gray-50">
             <h3 class="font-heading text-xl font-semibold tracking-tight text-gray-950">Sandboxes</h3>
             <p class="mt-1.5 text-[15px] text-gray-600 leading-relaxed">Give agents a secure environment where they can use tools, modify files, and autonomously complete real work.</p>
           </a>
 
-          <a href="#" class="lg:col-span-2 border border-gray-300 bg-white p-6 transition-colors hover:border-gray-400 hover:bg-gray-50">
+          <a href="/docs/guide/deployment/" class="lg:col-span-2 border border-gray-300 bg-white p-6 transition-colors hover:border-gray-400 hover:bg-gray-50">
             <h3 class="font-heading text-xl font-semibold tracking-tight text-gray-950">Durable Execution</h3>
             <p class="mt-1.5 text-[15px] text-gray-600 leading-relaxed">Preserve progress through failures and restarts, so workflows recover and agents resume when new work arrives.</p>
           </a>
 
-          <a href="#" class="lg:col-span-2 border border-gray-300 bg-white p-6 transition-colors hover:border-gray-400 hover:bg-gray-50">
+          <a href="/docs/guide/subagents/" class="lg:col-span-2 border border-gray-300 bg-white p-6 transition-colors hover:border-gray-400 hover:bg-gray-50">
             <h3 class="font-heading text-xl font-semibold tracking-tight text-gray-950">Subagents</h3>
             <p class="mt-1.5 text-[15px] text-gray-600 leading-relaxed">Define specialized roles for different tasks, then let your agent delegate work to the right expert.</p>
           </a>
 
-          <a href="#" class="lg:col-span-2 border border-gray-300 bg-white p-6 transition-colors hover:border-gray-400 hover:bg-gray-50">
+          <a href="/docs/guide/tools/" class="lg:col-span-2 border border-gray-300 bg-white p-6 transition-colors hover:border-gray-400 hover:bg-gray-50">
             <h3 class="font-heading text-xl font-semibold tracking-tight text-gray-950">Tools</h3>
             <p class="mt-1.5 text-[15px] text-gray-600 leading-relaxed">Give agents typed actions for calling APIs, querying data, and making controlled changes through your application.</p>
           </a>
 
-          <a href="#" class="lg:col-span-2 border border-gray-300 bg-white p-6 transition-colors hover:border-gray-400 hover:bg-gray-50">
+          <a href="/docs/guide/skills/" class="lg:col-span-2 border border-gray-300 bg-white p-6 transition-colors hover:border-gray-400 hover:bg-gray-50">
             <h3 class="font-heading text-xl font-semibold tracking-tight text-gray-950">Skills</h3>
             <p class="mt-1.5 text-[15px] text-gray-600 leading-relaxed">Package reusable expertise and workflows that agents can load whenever a task needs specialized guidance.</p>
           </a>
 
-          <a href="#" class="lg:col-span-2 border border-gray-300 bg-white p-6 transition-colors hover:border-gray-400 hover:bg-gray-50">
+          <a href="/docs/guide/tools/#connect-mcp-tools" class="lg:col-span-2 border border-gray-300 bg-white p-6 transition-colors hover:border-gray-400 hover:bg-gray-50">
             <h3 class="font-heading text-xl font-semibold tracking-tight text-gray-950">MCP Servers</h3>
             <p class="mt-1.5 text-[15px] text-gray-600 leading-relaxed">Connect agents to authenticated tools and services through the open Model Context Protocol ecosystem.</p>
           </a>
 
-          <a href="#" class="lg:col-span-2 border border-gray-300 bg-white p-6 transition-colors hover:border-gray-400 hover:bg-gray-50">
+          <a href="/docs/guide/observability/" class="lg:col-span-2 border border-gray-300 bg-white p-6 transition-colors hover:border-gray-400 hover:bg-gray-50">
             <h3 class="font-heading text-xl font-semibold tracking-tight text-gray-950">Observability</h3>
             <p class="mt-1.5 text-[15px] text-gray-600 leading-relaxed">Monitor your agents and export traces to OpenTelemetry, Braintrust, Sentry, or your own telemetry stack.</p>
           </a>
 
-          <a href="#" class="lg:col-span-2 border border-gray-300 bg-white p-6 transition-colors hover:border-gray-400 hover:bg-gray-50">
+          <a href="/docs/guide/chat/" class="lg:col-span-2 border border-gray-300 bg-white p-6 transition-colors hover:border-gray-400 hover:bg-gray-50">
             <h3 class="font-heading text-xl font-semibold tracking-tight text-gray-950">Chat</h3>
             <p class="mt-1.5 text-[15px] text-gray-600 leading-relaxed">Connect agents to where your work happens across Slack, Teams, Discord, GitHub, and more.</p>
           </a>
 
-          <a href="https://github.com/withastro/flue#readme" target="_blank" rel="noopener noreferrer" class="group lg:col-span-2 border border-gray-300 bg-gray-950 p-6 text-white transition-colors hover:bg-gray-800">
+          <a href="/docs/getting-started/quickstart/" class="group lg:col-span-2 border border-gray-300 bg-gray-950 p-6 text-white transition-colors hover:bg-gray-800">
             <h3 class="font-heading text-xl font-semibold tracking-tight">Explore the docs</h3>
             <p class="mt-1.5 text-base text-gray-300 leading-relaxed">Learn how to build, run, and deploy production-ready agents with Flue.</p>
             <span class="mt-5 inline-flex items-center gap-2 text-sm font-medium text-white">Read the docs <span class="transition-transform group-hover:translate-x-1">&rarr;</span></span>
@@ -568,9 +570,7 @@ const floatingSquares = [
       const copyPromptBtn = document.getElementById('copy-prompt-btn');
       const copyPromptSrc = document.getElementById('copy-prompt-text');
       const copyPromptShell = document.getElementById('copy-prompt-shell');
-      const copyPromptIndicator = document.getElementById('copy-prompt-indicator');
-      const copyPromptMessage = document.getElementById('copy-prompt-message');
-      if (copyPromptBtn && copyPromptSrc && copyPromptShell && copyPromptIndicator && copyPromptMessage) {
+      if (copyPromptBtn && copyPromptSrc && copyPromptShell) {
         const prompt = (copyPromptSrc.textContent ?? '').trim();
         let resetTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -589,11 +589,7 @@ const floatingSquares = [
             try { copied = document.execCommand('copy'); } catch {}
             textarea.remove();
           }
-          copyPromptIndicator.textContent = copied ? '✓' : '!';
-          copyPromptIndicator.classList.toggle('text-blue-500', copied);
-          copyPromptIndicator.classList.toggle('text-gray-500', !copied);
-          copyPromptMessage.textContent = copied ? 'Copied — now paste that into your coding agent to get started!' : 'Could not copy prompt';
-          copyPromptMessage.className = copied ? 'text-blue-600' : 'text-gray-600';
+          copyPromptShell.dataset.copyError = String(!copied);
           copyPromptShell.dataset.feedback = 'true';
           clearTimeout(resetTimer);
           resetTimer = setTimeout(() => {

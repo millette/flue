@@ -41,8 +41,7 @@ export function setupHomepageShaders() {
 			performanceNavigator.hardwareConcurrency <= 4) ||
 		(performanceNavigator.deviceMemory !== undefined && performanceNavigator.deviceMemory <= 4) ||
 		performanceNavigator.connection?.saveData === true;
-	const shouldAnimate = () =>
-		!reducedMotion.matches && !smallViewport.matches && !constrainedDevice;
+	const shouldAnimate = () => !reducedMotion.matches && !constrainedDevice;
 	const pixelBudget = () => (smallViewport.matches || constrainedDevice ? 8000 : 70000);
 	const makeDithering = (element: HTMLElement, config: DitheringConfig) => {
 		try {
