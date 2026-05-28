@@ -138,8 +138,33 @@
 	padding-left: 1.45rem;
 }
 
+.docs-content ul {
+	list-style: none;
+	padding-left: 1.5rem;
+}
+
 .docs-content li {
 	padding-left: 0.2rem;
+}
+
+.docs-content ul > li {
+	position: relative;
+}
+
+.docs-content ul > li::before {
+	position: absolute;
+	top: 0.63em;
+	left: -1.25rem;
+	width: 0.42rem;
+	height: 0.42rem;
+	border-radius: 999px;
+	background: var(--docs-accent-deep);
+	content: '';
+}
+
+.docs-content ul ul > li::before {
+	border: 1.5px solid var(--docs-accent-deep);
+	background: transparent;
 }
 
 .docs-content li + li {
