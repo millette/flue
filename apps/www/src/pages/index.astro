@@ -18,7 +18,11 @@ const floatingSquares = [
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <meta name="generator" content={Astro.generator} />
     <title>Flue — The Agent Harness Framework</title>
     <meta name="description" content="Agent = Model + Harness. Build autonomous agents and powerful AI workflows with Flue's programmable TypeScript harness. Write once, deploy anywhere." />
@@ -47,7 +51,14 @@ const floatingSquares = [
     <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b border-gray-200">
       <div class="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
         <div class="flex h-full items-center gap-8">
-          <a href="/" class="flex items-baseline gap-2">
+          <a href="/" class="flex items-center gap-2">
+            <svg class="size-6 shrink-0" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect width="108" height="108" transform="matrix(-1 0 0 1 108 0)" fill="black"/>
+              <rect width="18" height="18" transform="matrix(-1 0 0 1 72 18)" fill="white"/>
+              <rect width="18" height="18" transform="matrix(-1 0 0 1 54 72)" fill="white"/>
+              <rect width="18" height="18" transform="matrix(-1 0 0 1 54 36)" fill="white"/>
+              <rect width="18" height="18" transform="matrix(-1 0 0 1 72 54)" fill="white"/>
+            </svg>
             <span class="text-2xl font-extrabold tracking-tight text-gray-950 leading-8">Flue</span><span id="nav-tagline" class="overflow-hidden h-8 leading-8 lg:hidden"><span class="inline-block text-base sm:text-lg text-gray-500 translate-y-full opacity-0 transition-all duration-300 ease-out">the agent harness framework.</span></span>
           </a>
           <div class="hidden lg:flex h-full items-center gap-7 text-sm font-medium text-gray-500">
@@ -216,7 +227,7 @@ const floatingSquares = [
         <div class="grid lg:grid-cols-12 gap-12 lg:gap-20 items-center">
           <div class="lg:col-span-7">
             <h2 class="font-heading text-3xl sm:text-4xl font-bold tracking-tight leading-[1.1] text-balance">
-              Agent = Model + Harness
+              Flue is the framework for building the next generation of agents.
             </h2>
             <p class="mt-6 text-lg text-gray-600 leading-relaxed">
               It's <a href="https://www.langchain.com/blog/the-anatomy-of-an-agent-harness" target="_blank" rel="noopener noreferrer" class="text-gray-600 hover:underline transition-colors">the architecture</a> that makes coding agents like Claude Code and Codex so powerful. They can plan, gather context, write files, spawn subagents, delegate to specialists, and problem-solve. These agents are more than just chatbots. Why isn't every agent built like this?
