@@ -6,7 +6,7 @@ lastReviewedAt: 2026-06-02
 
 ## `FlueEvent`
 
-`FlueEvent` is the observable workflow-run event union. It includes run lifecycle, agent lifecycle, model turn, message, tool, task, compaction, operation, log, and idle events. Workflow-run events may include correlation fields such as `runId`, `instanceId`, `session`, `harness`, `operationId`, `turnId`, and `eventIndex`.
+`FlueEvent` is the observable runtime-event union. It includes run lifecycle, agent lifecycle, model turn, message, tool, task, compaction, operation, log, and idle events. Persisted workflow-run events always carry `runId` and `eventIndex`; together they identify one stored event and provide its ordering and resume cursor. Direct-agent stream indexes provide live per-context ordering only. Dispatched activity uses `dispatchId` as its delivery identity rather than becoming a workflow run.
 
 ## `AttachedAgentEvent`
 

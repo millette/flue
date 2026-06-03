@@ -20,7 +20,7 @@ Retrieves one workflow-run record.
 events(runId: string, options?: RunEventsOptions): Promise<{ events: FlueEvent[] }>;
 ```
 
-Retrieves recorded workflow-run events. `after` returns events strictly after one event index. `limit` defaults to `100` and accepts `1..1000`. Use `types` to select event types.
+Retrieves recorded workflow-run events. Each recorded event carries `runId` and `eventIndex`; together they identify one immutable persisted event. `after` returns events strictly after one event index. `limit` defaults to `100` and accepts `1..1000`. Use `types` to select event types.
 
 ## `client.runs.stream(...)`
 

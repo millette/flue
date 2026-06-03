@@ -28,7 +28,7 @@ import {
 
 `FlueEvent` is the observable runtime activity union. Workflow invocations emit workflow-run events with `runId`. Direct prompts and asynchronously dispatched agent inputs emit agent activity with `instanceId`; dispatched activity may also carry `dispatchId`. Those interactions are not workflow runs.
 
-Runtime-emitted events receive a per-context `eventIndex` and `timestamp`. Applicable events may also carry harness and session names, generated operation and turn ids, task correlation, and parent-session correlation. Workflow history persists events where run-store persistence succeeds. Attached-agent streams and `observe(...)` are live observation surfaces, not durable workflow history.
+Runtime-emitted events receive a per-context `eventIndex` and `timestamp`. Applicable events may also carry harness and session names, generated operation and turn ids, task correlation, and parent-session correlation. Persisted workflow events always carry `runId` and `eventIndex`; together they are the immutable persisted identity and SSE resume cursor for one workflow event. Attached-agent streams and `observe(...)` are live observation surfaces, not durable workflow history, so their indexes provide per-context ordering rather than durable identity.
 
 ### Lifecycle events
 
