@@ -23,16 +23,17 @@ Before editing, inspect all workspace `package.json` files. Change versions only
 
 1. Before any release work, run `git status --short --branch` and confirm the working directory is clean. If it is not clean, stop and ask before proceeding.
 2. Read `CHANGELOG.md` and review the unreleased changes against the commits since the prior release. Ensure the selected release has an accurate dated changelog section; include its update in the release changes.
-3. Confirm the repository is on the intended current branch and determine the selected release version.
-4. Inspect all workspace package manifests and update the `version` field in each public package `package.json` to the selected release version.
-5. Run `pnpm install --lockfile-only` if necessary to update version-related lockfile metadata.
-6. Rebuild from scratch: remove generated build outputs for public packages, then run the repository build command (`pnpm run build` from the repository root).
-7. Run repository validation before publishing: `pnpm run check` from the repository root.
-8. Publish each public package from its package directory using `pnpm publish -r --no-git-checks`. Publish in dependency order when required (for this repository, publish `@flue/runtime` before packages that depend on it).
-9. Inspect the final diff and stage only release-generated changes, including the changelog, package versions, lockfile updates, and build or prepublish-generated tracked files.
-10. Commit after publication with `git commit -m "chore: release v<VERSION>"`.
-11. Tag that final commit with `git tag v<VERSION>`.
-12. Push the current branch, then push the tag: `git push` followed by `git push --tags`.
+3. Check the installed versions of `@earendil-works/pi-ai` and `@earendil-works/pi-agent-core` against their latest npm versions. If either is outdated, warn the user and ask whether to update before continuing the release. If the user declines, continue without updating. If the user approves, review the upstream changelog for every intervening version and confirm the update is safe before running `pnpm update --recursive --latest @earendil-works/pi-ai @earendil-works/pi-agent-core`.
+4. Confirm the repository is on the intended current branch and determine the selected release version.
+5. Inspect all workspace package manifests and update the `version` field in each public package `package.json` to the selected release version.
+6. Run `pnpm install --lockfile-only` if necessary to update version-related lockfile metadata.
+7. Rebuild from scratch: remove generated build outputs for public packages, then run the repository build command (`pnpm run build` from the repository root).
+8. Run repository validation before publishing: `pnpm run check` from the repository root.
+9. Publish each public package from its package directory using `pnpm publish -r --no-git-checks`. Publish in dependency order when required (for this repository, publish `@flue/runtime` before packages that depend on it).
+10. Inspect the final diff and stage only release-generated changes, including the changelog, package versions, lockfile updates, and build or prepublish-generated tracked files.
+11. Commit after publication with `git commit -m "chore: release v<VERSION>"`.
+12. Tag that final commit with `git tag v<VERSION>`.
+13. Push the current branch, then push the tag: `git push` followed by `git push --tags`.
 
 ## Guardrails
 
