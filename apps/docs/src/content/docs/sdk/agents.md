@@ -24,9 +24,38 @@ Sends one prompt to a persistent agent instance and waits for the terminal resul
 
 ```ts
 interface AgentPromptResult extends AgentSendResult {
-  result: unknown;
+  result: AgentPromptResponse;
 }
 ```
+
+### `AgentPromptResponse`
+
+```ts
+interface AgentPromptResponse {
+  text: string;
+  usage: {
+    input: number;
+    output: number;
+    cacheRead: number;
+    cacheWrite: number;
+    totalTokens: number;
+    cost: {
+      input: number;
+      output: number;
+      cacheRead: number;
+      cacheWrite: number;
+      total: number;
+    };
+  };
+  model: { provider: string; id: string };
+}
+```
+
+| Field   | Type     | Description                                                              |
+| ------- | -------- | ------------------------------------------------------------------------ |
+| `text`  | `string` | Assistant text returned by the prompt.                                   |
+| `usage` | object   | Aggregated token and cost usage for model work performed by the prompt. |
+| `model` | object   | Model selected for the prompt's primary turn.                            |
 
 ## `client.agents.send(...)`
 
