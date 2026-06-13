@@ -18,6 +18,9 @@
 - `CallHandle` now implements the full Promise interface, and SDK stream coordinates are taken from server responses rather than fabricated.
 - `FlueFs.writeFile()` now guarantees parent directory creation in every sandbox mode; `ShellOptions.timeoutMs` is available for shell operations.
 - `observe()` subscribers can skip selected event types, and OpenTelemetry spans and attributes now align with GenAI semconv.
+- Added `@flue/react` with `FlueProvider`, `useFlueAgent()`, and `useFlueWorkflow()` for live agent transcripts and workflow-run observation. Agent messages use an AI SDK v5-compatible parts shape without a runtime dependency on `ai`.
+- Durable event-stream reads accept `tail=N` to start from the beginning while reading at most the latest N events. Direct agent prompt receipts and their emitted events now expose a `submissionId` for reliable correlation.
+- `@flue/sdk` accepts browser-relative base URLs such as `/api`, exposes typed message snapshots, and supports `tail` across stream APIs.
 
 ### Fixes & Other Changes
 
@@ -25,6 +28,7 @@
 - Cloudflare attempt markers are now Flue-owned rather than querying private Agents SDK tables.
 - `flue logs` treats `--since` as an opaque Durable Streams offset, supports `--format ndjson`, and uses public run metadata.
 - Many bug fixes landed across Node and Cloudflare execution, SDK stream iteration, CLI shutdown and reload, Workers AI streaming, sandbox filesystem behavior, skill parsing, docs, and test coverage.
+- Added a same-origin React chat example with agent conversation and workflow log views.
 
 ## 0.11.1 - 2026-06-11
 

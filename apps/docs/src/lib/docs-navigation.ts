@@ -159,7 +159,16 @@ export const docsSections: DocsSection[] = [
 						],
 					},
 					{ title: 'Events and records', slug: 'sdk/events' },
-				{ title: 'Errors', slug: 'sdk/errors' },
+					{ title: 'Errors', slug: 'sdk/errors' },
+					{
+						title: 'React',
+						slug: 'sdk/react/overview',
+						items: [
+							{ title: 'Overview and setup', slug: 'sdk/react/overview' },
+							{ title: 'useFlueAgent', slug: 'sdk/react/use-flue-agent' },
+							{ title: 'useFlueWorkflow', slug: 'sdk/react/use-flue-workflow' },
+						],
+					},
 				],
 			},
 		],

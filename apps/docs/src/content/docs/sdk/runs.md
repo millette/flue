@@ -19,7 +19,7 @@ Retrieves one workflow-run record via the public `GET /runs/:runId?meta` view. T
 events(runId: string, options?: RunEventsOptions): Promise<FlueEvent[]>;
 ```
 
-Retrieves events from a workflow run as an array. This is a Durable Streams catch-up read with no live tailing. Omit `offset` for full history, or provide an offset to resume strictly after that point.
+Retrieves events from a workflow run as an array. This is a Durable Streams catch-up read with no live tailing. Omit `offset` for full history, provide an offset to resume strictly after that point, or pass `tail` to limit a full-history read to the most recent events.
 
 ### `RunEventsOptions`
 
@@ -53,9 +53,12 @@ for await (const event of client.runs.stream(run.runId, { live: true })) {
 | Option   | Type                                    | Default | Description                                              |
 | -------- | --------------------------------------- | ------- | -------------------------------------------------------- |
 | `offset` | `string`                                | `"-1"`  | Starting offset. `"-1"` for full history, `"now"` for future events only, or an opaque offset from a previous read. |
+| `tail`   | `number`                                | —       | With `offset: "-1"`, start far enough back to read at most the latest N events. Must be an integer of at least 1. |
 | `live`   | `boolean \| 'sse' \| 'long-poll'`       | `true`  | Enable live tailing. `true` uses long-poll; pass `'sse'` explicitly for SSE. |
 | `signal` | `AbortSignal`                           | —       | Stop consuming events when aborted.                      |
 | `backoffOptions` | `BackoffOptions`                  | —       | Configure reconnect retry behavior.                      |
+
+`tail` is available anywhere these options are accepted, including `client.runs.events()`. It only modifies the `"-1"` start; it has no effect with `"now"` or a concrete resume offset. There is no upper cap.
 
 ### `BackoffOptions`
 

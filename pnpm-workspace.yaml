@@ -13,6 +13,10 @@ allowBuilds:
 minimumReleaseAge: 1440
 resolutionMode: highest
 minimumReleaseAgeExclude:
+  - '@ai-sdk/*'
   - '@aws-sdk/*'
   - '@smithy/*'
+  - ai
   - protobufjs
+  - react
+  - react-dom

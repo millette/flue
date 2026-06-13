@@ -86,8 +86,11 @@ Starts one prompt without waiting for completion. This uses the default `POST /a
 interface AgentSendResult {
   streamUrl: string;
   offset: string;
+  submissionId: string;
 }
 ```
+
+Both `prompt()` and `send()` return the required `submissionId`. It correlates this direct submission with its attached agent events; workflow- and dispatch-driven activity use their existing `runId` and `dispatchId` fields instead.
 
 ## `client.agents.stream(...)`
 

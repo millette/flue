@@ -45,7 +45,20 @@ Offsets are opaque Durable Streams coordinates. Flue currently formats them as t
 | `now` | Read from the current tail. In live mode, wait for events appended after the current tail. |
 | Returned offset | Resume strictly after that event. |
 
-The SDK exposes a resume offset as `stream.offset`. It is batch-granular: it reflects the `Stream-Next-Offset` of the most recently fetched HTTP response, not the last delivered event, so checkpointing it mid-batch and resuming from it skips the rest of that batch. For per-event checkpoints on workflow-run streams use the event's `eventIndex` (there it equals the stream sequence; agent streams restart `eventIndex` per prompt, so it is not an offset there); `flue logs --format ndjson` prints a per-event `offset` derived from it. `agents.send()` and `agents.prompt()` return an offset captured before that prompt is admitted, so reading from that offset yields that prompt's events. `workflows.invoke()` returns the run ID plus a server-provided `streamUrl` and an `offset` captured at admission, so reading from that offset yields the run's events from the start.
+The SDK exposes a resume offset as `stream.offset`. It is batch-granular: it advances only after every event in the fetched batch has been delivered. Resuming from a checkpoint does not skip undelivered events, though it can re-deliver an in-flight batch. For per-event checkpoints on workflow-run streams use the event's `eventIndex` (there it equals the stream sequence; agent streams restart `eventIndex` per prompt, so it is not an offset there); `flue logs --format ndjson` prints a per-event `offset` derived from it. `agents.send()` and `agents.prompt()` return an offset captured before that prompt is admitted, so reading from that offset yields that prompt's events. `workflows.invoke()` returns the run ID plus a server-provided `streamUrl` and an `offset` captured at admission, so reading from that offset yields the run's events from the start.
+
+## Recent history with `tail`
+
+`tail=N` modifies the `-1` start sentinel — "from the beginning, but at most the last N events."
+
+This extension applies to agent and workflow-run `GET` routes. It changes only the initial position: it has no effect with `offset=now` or a concrete offset, including the concrete offsets used when a client reconnects. A value larger than the stream returns its full history.
+
+`tail` must occur once and be an integer greater than or equal to 1. Zero, negative values, non-integers, and duplicate parameters return `400`. There is no upper cap; server read batching remains independent of the requested starting position.
+
+```http
+GET /agents/support/ticket-42?offset=-1&tail=100
+GET /runs/run_01JX...?offset=-1&tail=100
+```
 
 ## Response headers
 
