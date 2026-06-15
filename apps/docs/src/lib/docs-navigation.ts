@@ -263,6 +263,14 @@ export const docsSections: DocsSection[] = [
 					{ title: 'Vercel Sandbox', slug: 'ecosystem/sandboxes/vercel' },
 				],
 			},
+			{
+				title: 'Tooling',
+				items: [
+					{ title: 'Braintrust', slug: 'ecosystem/tooling/braintrust' },
+					{ title: 'OpenTelemetry', slug: 'ecosystem/tooling/opentelemetry' },
+					{ title: 'Sentry', slug: 'ecosystem/tooling/sentry' },
+				],
+			},
 		],
 	},
 ];

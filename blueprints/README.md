@@ -11,6 +11,7 @@ A blueprint is a Markdown guide for an AI coding agent, not an npm package or ru
 | `sandbox`  | A sandbox adapter for a remote execution provider.                |
 | `channel`  | Verified provider ingress, a client, and application-owned tools. |
 | `database` | A database adapter implementing Flue's `PersistenceAdapter`.      |
+| `tooling`  | A developer-tool integration such as observability or evaluation. |
 
 Do not introduce a new kind without first discussing the required CLI, runtime, and maintenance changes with the Flue team. New blueprints within an existing kind are welcome.
 
@@ -49,7 +50,7 @@ Named blueprint:
 
 | Field     | Type     | Required for     | Description                                      |
 | --------- | -------- | ---------------- | ------------------------------------------------ |
-| `kind`    | string   | every blueprint  | `sandbox`, `channel`, or `database`              |
+| `kind`    | string   | every blueprint  | `sandbox`, `channel`, `database`, or `tooling`   |
 | `version` | integer  | every blueprint  | Positive, monotonically increasing guide version |
 | `website` | string   | named blueprints | Provider homepage shown by `flue add`            |
 | `aliases` | string[] | optional         | Additional names accepted by `flue add`          |
@@ -116,6 +117,12 @@ Database blueprints produce a source-root `db.ts` that default-exports a `Persis
 Named blueprints with first-party packages install `@flue/<backend>` and create a small `db.ts`. The generic guide points to the `PersistenceAdapter` contract and the PostgreSQL blueprint as an implementation example.
 
 Database adapters are for the Node target; Cloudflare uses Durable Object SQLite and rejects `db.ts`. Read connection strings from the environment and do not store application business data in the adapter.
+
+### Tooling blueprints
+
+Tooling is a catchall for developer integrations such as observability, evaluation, debugging, security, and operational services that do not implement the channel, database, or sandbox contracts.
+
+A tooling blueprint should inspect the configured target and runtime boundaries before selecting packages or extension points. Use target-specific SDKs, public Flue APIs such as `observe(...)`, and module-local Cloudflare extensions when generated Durable Objects require wrapping. Tooling may touch several existing application files; use a primary-file marker only when the integration owns one durable source file. Otherwise, comparison against the complete blueprint is the update contract.
 
 ## Adding a blueprint
 

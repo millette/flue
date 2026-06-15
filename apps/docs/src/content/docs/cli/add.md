@@ -21,7 +21,7 @@ With no arguments, the command lists known blueprints. With a kind and known nam
 
 | Argument        | Description                                                                          |
 | --------------- | ------------------------------------------------------------------------------------ |
-| `<kind>`        | Blueprint kind: `sandbox`, `channel`, or `database`.                                 |
+| `<kind>`        | Blueprint kind: `sandbox`, `channel`, `database`, or `tooling`.                      |
 | `<name-or-url>` | Known blueprint slug or alias, or an absolute URL used as a research starting point. |
 
 ## Options
@@ -37,6 +37,7 @@ With no arguments, the command lists known blueprints. With a kind and known nam
 | `sandbox`  | Build a sandbox adapter from provider documentation or source. |
 | `channel`  | Add verified provider ingress, a client, and app-owned tools.  |
 | `database` | Add a database-backed persistence adapter.                     |
+| `tooling`  | Add developer tooling such as observability or evaluation.     |
 
 Run `flue add` without arguments to list the currently known blueprints.
 
@@ -65,9 +66,12 @@ flue add channel twilio --print | codex
 flue add channel messenger --print | codex
 flue add sandbox @cloudflare/shell --print | opencode
 flue add database postgres --print | codex
+flue add tooling braintrust --print | opencode
+flue add tooling sentry --print | opencode
 flue add sandbox https://e2b.dev --print | claude
 flue add channel https://provider.example/webhooks --print | codex
 flue add database https://database.example/docs --print | codex
+flue add tooling https://tool.example/docs --print | opencode
 ```
 
 See [Sandboxes](/docs/guide/sandboxes/), [Channels](/docs/guide/channels/), and the [Ecosystem](/docs/ecosystem/) for implementation guidance.

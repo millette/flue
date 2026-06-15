@@ -1,36 +1,62 @@
 # Braintrust tracing for Flue
 
-A Node-focused example that maps Flue's public `observe(...)` stream into Braintrust spans without importing `@flue/runtime/internal` or patching runtime implementation files.
+This example registers Braintrust's public Flue observer against Flue's public `observe(...)` event stream.
 
 ## What it demonstrates
 
-- Workflow runs become root Braintrust spans.
-- Flue operations become child spans.
-- `turn_request` / `turn` pairs become `llm` spans containing model-visible input, output, provider/model identity, and usage/cost metrics.
-- Tool calls, child tasks, and compactions become nested spans using Flue correlation fields.
-- Token and cost metrics are recorded on model-turn leaf spans; enclosing operation and compaction spans retain rolled-up usage as metadata so totals are not double-counted.
+- One observer integration traces workflows, prompt and skill operations, model turns, tools, delegated tasks, and compactions.
+- Model spans include content, errors, token usage, and estimated cost where available.
+- Flue correlation fields connect workflow and persistent-agent activity to Braintrust traces.
+- The application continues without trace export when `BRAINTRUST_API_KEY` is absent.
 
-The integration is entirely in [`src/app.ts`](src/app.ts). Workflows do not import Braintrust.
+The integration lives in [`src/app.ts`](src/app.ts). Workflows do not import Braintrust.
 
-## Why `observe(...)`
+## Integration
 
-`observe(...)` is Flue's public semantic integration contract. It reports workflows, operations, model turns, tools, tasks, and compactions with stable correlation fields. Braintrust may separately provide wrappers or Node auto-instrumentation to activate span context around live provider calls, but those optional mechanisms are not required to construct a Flue semantic trace from events.
-
-The bridge intentionally uses only Braintrust's public logger/span APIs and Flue's public events:
+The example pins Braintrust 3.17 and registers only the lifecycle events its Flue observer consumes:
 
 ```ts
-import { observe } from '@flue/runtime';
-import { initLogger } from 'braintrust';
+import { type FlueEvent, observe } from '@flue/runtime';
+import { braintrustFlueObserver, initLogger } from 'braintrust';
 
-const logger = process.env.BRAINTRUST_API_KEY
-  ? initLogger({ projectName: 'Flue', apiKey: process.env.BRAINTRUST_API_KEY })
-  : undefined;
+const apiKey = process.env.BRAINTRUST_API_KEY;
+const observedRuns = new Set<string>();
 
-observe((event) => {
-  if (!logger) return;
-  // Convert correlated Flue lifecycle events into Braintrust spans.
-});
+if (apiKey) {
+  initLogger({
+    projectName: process.env.BRAINTRUST_PROJECT_NAME ?? 'Flue',
+    apiKey,
+  });
+
+  observe(
+    (event, ctx) => braintrustFlueObserver(compatibleEvent(event), ctx),
+    {
+      types: [
+        'run_start', 'run_resume', 'run_end',
+        'operation_start', 'operation',
+        'turn_request', 'turn',
+        'tool_start', 'tool',
+        'task_start', 'task',
+        'compaction_start', 'compaction',
+      ],
+    },
+  );
+}
+
+function compatibleEvent(event: FlueEvent): unknown {
+  if (event.type === 'run_start') observedRuns.add(event.runId);
+  if (event.type === 'run_end') observedRuns.delete(event.runId);
+  if (event.type === 'tool') return { ...event, type: 'tool_call' };
+  if (event.type === 'run_resume') {
+    if (observedRuns.has(event.runId)) return event;
+    observedRuns.add(event.runId);
+    return { ...event, type: 'run_start', payload: undefined };
+  }
+  return event;
+}
 ```
+
+Braintrust 3.17 expects `tool_call` for a terminal tool event and does not consume Flue's `run_resume`. The bridge translates recovery only when the current process did not observe the original workflow start; otherwise `run_end` closes the existing span. This compatibility fallback does not preserve Flue's distinct recovery semantics or durably continue a trace across isolates.
 
 ## Trace shape
 
@@ -40,43 +66,24 @@ For a tool-using workflow, the generated structure is:
 workflow:tools
   flue.prompt
     llm:<model>
-      tool:lookup_weather
+    tool:lookup_weather
     llm:<model>
 ```
 
-The bridge uses:
+| Flue activity | Braintrust representation |
+| --- | --- |
+| Workflow invocation | Root `task` span |
+| Prompt, skill, or compaction operation | Nested `task` span |
+| Model turn | Nested `llm` span |
+| Tool call | Nested `tool` span |
+| Delegated task | Nested `task` span |
+| Context compaction | Nested compaction span |
 
-| Flue events                       | Braintrust representation |
-| --------------------------------- | ------------------------- |
-| `run_start` / `run_end`           | root `task` span          |
-| `operation_start` / `operation`   | nested `task` span        |
-| `turn_request` / `turn`           | nested `llm` span         |
-| `tool_start` / `tool`        | nested `tool` span        |
-| `task_start` / `task`             | nested `task` span        |
-| `compaction_start` / `compaction` | nested `task` span        |
-
-Workflows are the only Flue executions represented as runs. For direct or dispatched persistent-agent input, `operationId` is the finite trace boundary and `instanceId`, `session`, and optional `dispatchId` should be retained as attributes.
+Workflows are the only Flue executions represented as runs. Direct or dispatched persistent-agent activity uses operation, instance, session, and optional dispatch correlation instead.
 
 ## Sensitive content
 
-Flue events are content-bearing. This custom `observe(...)` bridge intentionally sends workflow payloads/results, operation results, task prompts/results, tool arguments/results, model-visible messages, outputs, system prompts, tool definitions, and supported reasoning data to Braintrust. Add filtering or redaction before enabling it for production or sensitive workloads, and run it only where Braintrust retention and access policies are appropriate for that content. The official OpenTelemetry adapter defaults to metadata-only export and requires an application-owned `exportContent` callback before exporting content. See [Observability](https://flueframework.com/docs/guide/observability/) for guidance.
-
-## Files
-
-```text
-examples/braintrust/
-├── AGENTS.md
-├── flue.config.ts
-├── package.json
-├── tsconfig.json
-├── README.md
-└── src/
-    ├── app.ts
-    └── workflows/
-        ├── prompt.ts
-        ├── tools.ts
-        └── task.ts
-```
+Braintrust's observer is content-bearing. It can export workflow payloads and results, model messages and output, reasoning, system prompts, tool definitions and values, task content, errors, and correlation metadata. Use Braintrust's masking support and review retention and access requirements before enabling it for sensitive workloads. See the [Braintrust ecosystem guide](https://flueframework.com/docs/ecosystem/tooling/braintrust/).
 
 ## Running it
 
@@ -93,8 +100,6 @@ export BRAINTRUST_API_KEY='<braintrust-api-key>'
 export BRAINTRUST_PROJECT_NAME='Flue'
 export ANTHROPIC_API_KEY='<anthropic-api-key>'
 ```
-
-If `BRAINTRUST_API_KEY` is unset, the bridge does not initialize Braintrust and the workflows still run normally.
 
 From this example directory, start the Node dev server:
 
@@ -118,6 +123,9 @@ curl -X POST 'http://localhost:3583/workflows/task?wait=result' \
   -d '{"draft":"We are leveraging synergies to move faster."}'
 ```
 
-## Current integration boundary
+Run the compatibility checks with:
 
-This example creates completed Braintrust spans from public Flue events. It does not attempt to establish active Braintrust async context during underlying provider invocation. If a Braintrust integration needs separately auto-instrumented provider SDK spans to inherit a live parent, that remains an optional Braintrust wrapper/auto-instrumentation concern rather than a dependency on Flue private internals.
+```bash
+pnpm run check:types
+pnpm run build
+```

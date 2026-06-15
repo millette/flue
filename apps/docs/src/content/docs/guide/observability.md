@@ -1,7 +1,7 @@
 ---
 title: Observability
 description: Inspect workflow runs, monitor agent activity, and export telemetry from your application.
-lastReviewedAt: 2026-06-03
+lastReviewedAt: 2026-06-15
 ---
 
 Observability helps you understand whether Flue work completed, failed, became slow, or used more model resources than expected. Inspect workflow run history for bounded jobs, and use `observe(...)` to monitor workflows and continuing agents across your application.
@@ -81,76 +81,31 @@ An operation is the useful finite boundary for agent activity, such as prompting
 
 When an operation is slow or unexpectedly expensive, its nested activity can provide the explanation. One prompt operation may include multiple model turns or tool calls. Model turns expose latency, token usage, and cost; tool activity shows where the agent spent time or encountered an error.
 
-Callbacks registered with `observe(...)` are invoked while Flue emits activity and receive isolated JSON snapshots. These runtime events are content-bearing: depending on the event, they can include payloads, prompts, model messages, image bytes, logs, tool values, and errors. Workflow history persists events in the event stream store when event persistence succeeds. Keep callbacks lightweight and apply an exporter-local sanitization policy before forwarding events externally. Returned promises are observed for rejection but are not awaited. In a distributed deployment, each running application context observes the activity it handles; send telemetry to an external backend if it needs to be aggregated across instances.
+Callbacks registered with `observe(...)` are invoked while Flue emits activity and receive isolated JSON snapshots. Returned promises are observed for rejection but are not awaited. In a distributed deployment, each running application context observes only the activity it handles; use an external backend to aggregate telemetry across processes or isolates.
 
-Pass `observe(subscriber, { types: [...] })` to restrict delivery to the event types your subscriber handles. This is a cost control, not just a filter: each delivered event is serialized into an isolated snapshot on the emit path, and streaming events such as `message_update` carry the full accumulated assistant message on every streamed chunk. Listing only lifecycle event types keeps observers off that per-chunk path.
+Pass `observe(subscriber, { types: [...] })` to restrict delivery to the event types your subscriber handles. This is a cost control, not just a filter: each delivered event is serialized on the emit path, and streaming events such as `message_update` carry the full accumulated assistant message on every chunk.
+
+## Choose an observability provider
+
+| Provider | Choose it when |
+| --- | --- |
+| [OpenTelemetry](/docs/ecosystem/tooling/opentelemetry/) | You need vendor-neutral traces or already operate an OpenTelemetry-compatible backend. |
+| [Braintrust](/docs/ecosystem/tooling/braintrust/) | You want content-bearing agent traces, model usage, costs, and evaluation-oriented debugging. |
+| [Sentry](/docs/ecosystem/tooling/sentry/) | You primarily want actionable workflow failures and explicit error logs without exporting model content by default. |
+
+You can also consume `observe(...)` directly when these integrations do not match your telemetry or data-handling requirements.
 
 ## Export telemetry safely
 
-If your application already uses OpenTelemetry, register Flue's observer adapter in `src/app.ts`:
+Runtime events can contain workflow payloads, prompts, model messages, logs, tool values, errors, and application-owned metadata. Flue replaces image data in recognized content blocks with an omission sentinel before events are observed or persisted, but arbitrary payloads, log attributes, tool details, and results still require an application-owned sanitization policy.
 
-```ts title="src/app.ts"
-import { createOpenTelemetryObserver, observedEventTypes } from '@flue/opentelemetry';
-import { observe } from '@flue/runtime';
-import { flue } from '@flue/runtime/routing';
-import { Hono } from 'hono';
+Start with outcome-oriented signals: failed workflows, explicit application error logs, slow operations, and completed model usage. A model turn or tool call may fail before an agent recovers, so treating every nested error as an incident can create noisy alerts. When aggregating usage, sum model-turn leaf values rather than operation or compaction roll-ups; nested duration values can overlap and should not be summed.
 
-observe(createOpenTelemetryObserver(), { types: observedEventTypes });
-
-const app = new Hono();
-app.route('/', flue());
-
-export default app;
-```
-
-The adapter turns workflow runs, agent operations, model turns, tools, delegated tasks, compaction, and logs into trace activity. You can also consume `observe(...)` directly to send terminal failures to an error reporter or derive metrics such as operation latency, workflow failures, and model usage or cost.
-
-### Attach application trace context
-
-Workflow and standalone operation spans start as independent roots by default. To attach them beneath application-owned spans, pass `resolveRootContext` to `createOpenTelemetryObserver(...)`. The resolver runs only when a Flue span has no tracked Flue parent; return `undefined` to preserve root behavior selectively.
-
-For an ordinary inbound HTTP request, extract its carrier in application code:
-
-```ts title="src/app.ts"
-import { context, propagation } from '@opentelemetry/api';
-import { createOpenTelemetryObserver, observedEventTypes } from '@flue/opentelemetry';
-import { observe } from '@flue/runtime';
-
-observe(
-  createOpenTelemetryObserver({
-    resolveRootContext(_event, ctx) {
-      if (!ctx.req) return undefined;
-
-      return propagation.extract(context.active(), Object.fromEntries(ctx.req.headers));
-    },
-  }),
-  { types: observedEventTypes },
-);
-```
-
-This is an application-owned extraction policy, not automatic Flue propagation. On Cloudflare, route middleware sees the original inbound request before durable admission. Later SQL-backed direct-agent processing uses a synthetic internal request, and dispatched work does not carry an HTTP trace carrier automatically. Capture correlation before admission and resolve later parents from application-owned state when needed. See [Deploy Agents on Cloudflare](/docs/ecosystem/deploy/cloudflare/#interruption-and-recovery-semantics) for the platform-specific transport boundaries.
-
-Flue spans describe semantic work such as workflows, operations, turns, and tools. The adapter does not activate OpenTelemetry context around provider SDK calls, so spans created by separate provider auto-instrumentation may require application-owned instrumentation or composition to appear beneath the intended Flue span.
-
-### Interpret workflow recovery
-
-A recovered Cloudflare workflow does not continue or retry workflow code. For an admitted interrupted run that still needs terminalization, Flue emits `run_resume` before the terminal `run_end`. This also applies when interruption occurred after admission but before live observers received `run_start`.
-
-The OpenTelemetry adapter represents that recovery handling as a separate workflow segment. It closes interrupted descendant spans still tracked in the current application context and links the new segment to a predecessor workflow span only when that span context remains locally available. The link is opportunistic correlation, not durable trace propagation across isolate resets.
-
-### Export and interpret telemetry safely
-
-The adapter exports metadata and generic failure messages by default. To export content, pass an application-owned `exportContent(event)` callback. It receives a shallow event copy; return a (typically sanitized) event to export its supported content values, or return `undefined` to omit content from that event. Passing `exportContent: (event) => event` intentionally exports unsanitized content and is useful only when the configured exporter is appropriate for that data.
-
-Exported event indexes can correlate trace activity with workflow history when persistence succeeds. For direct and dispatched agent activity, indexes are live per-context ordering values only; `dispatchId` remains the delivery identity for dispatched input. When aggregating model usage, sum model-turn leaf values rather than operation or compaction roll-ups. Nested duration values describe overlapping elapsed intervals and should not be summed.
-
-Start with signals that describe outcomes: failed workflows, explicit application error logs, slow operations, and completed model usage. A model turn or tool call may fail before an agent recovers, so treating every nested error as an incident can create noisy alerts.
-
-Telemetry can include sensitive application and model data, including workflow payloads, terminal errors, log attributes, prompts, output, reasoning-bearing content, image bytes, and tool arguments or results. Prefer exporting timing, failure state, token, and cost metadata unless content is necessary for your investigation. If you export content or write your own observer, redact secrets and personal data before sending events to an external service.
+Restrict subscriptions to required event types and review the retention, access, and redaction controls of any external backend before exporting content. The provider guides above describe each integration's default export policy and runtime-specific behavior.
 
 ## Next steps
 
+- [Events reference](/docs/api/events-reference/) — inspect the complete observable event contract.
 - [Workflows](/docs/guide/workflows/) — create finite operations whose run history can be inspected.
 - [Agents](/docs/guide/building-agents/) — create continuing agent instances and deliver direct or dispatched input.
 - [Routing](/docs/guide/routing/) — add the application entrypoint where telemetry observers are registered.
-- [CLI](/docs/cli/overview/) — build the application environment that emits your production telemetry.

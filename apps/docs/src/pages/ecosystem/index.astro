@@ -78,11 +78,18 @@ const databases: DirectoryItem[] = [
 	{ name: 'Valkey', href: '/docs/ecosystem/databases/valkey/', mark: 'valkey', background: '#123678', keywords: 'valkey redis protocol key value database persistence' },
 ];
 databases.sort(sortDirectoryItems);
+
+const tooling: DirectoryItem[] = [
+	{ name: 'Braintrust', href: '/docs/ecosystem/tooling/braintrust/', icon: '/docs/braintrust.svg', background: '#2c1fea', iconClass: 'ecosystem-logo-tooling', keywords: 'braintrust observability tracing evaluation evals monitoring' },
+	{ name: 'OpenTelemetry', href: '/docs/ecosystem/tooling/opentelemetry/', icon: '/docs/opentelemetry.svg', background: '#ffffff', iconClass: 'ecosystem-logo-tooling', keywords: 'opentelemetry otel observability telemetry tracing traces otlp monitoring vendor neutral' },
+	{ name: 'Sentry', href: '/docs/ecosystem/tooling/sentry/', icon: 'https://svgl.app/library/sentry.svg', background: '#ffffff', iconClass: 'ecosystem-logo-tooling', keywords: 'sentry observability monitoring errors tracing' },
+];
+tooling.sort(sortDirectoryItems);
 ---
 
 <DocsLayout
 	title="Ecosystem"
-	description="Browse deployment guides, channels, databases, and sandbox adapters for Flue applications."
+	description="Browse deployment guides, channels, databases, sandbox adapters, and developer tooling for Flue applications."
 	currentSlug="ecosystem"
 	headings={[]}
 	showTableOfContents={false}
@@ -184,6 +191,26 @@ databases.sort(sortDirectoryItems);
 									<svg class="ecosystem-database-logo text-white" viewBox="0 0 512 512" aria-hidden="true">
 										<path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="m126.1 431.2-91.7-57.4V128.6L258.7 0l218.9 128.8v258L255.2 512 178 463.7V346.2L136.2 320V187l121.2-69.5 118.4 69.7v139.4L282 379.4v-56.1c28.1-10.8 48.3-38.6 48.3-71.5 0-42.3-33.5-76.3-74.3-76.3s-74.3 34-74.3 76.3c0 32.8 20.2 60.6 48.3 71.5v106.3l26.8 16.8 164.4-92.6V161.1L258.3 65.3l-167.5 96v181.3l35.3 22.1zM256 216.7c18.5 0 33.1 15.9 33.1 35.1 0 19.1-14.6 35.1-33.1 35.1s-33.1-15.9-33.1-35.1 14.6-35.1 33.1-35.1" />
 									</svg>
+								) : (
+									<span class="ecosystem-default-grid" aria-hidden="true" />
+								)}
+							</span>
+							<span class="ecosystem-name">{item.name}</span>
+						</a>
+					</li>
+				))}
+			</ul>
+		</section>
+
+		<section class="ecosystem-section mb-14" data-ecosystem-section>
+			<h2 id="tooling" class="mb-6 scroll-mt-20 text-3xl font-semibold tracking-[-0.03em] text-gray-950">Tooling</h2>
+			<ul class="ecosystem-grid" role="list">
+				{tooling.map((item) => (
+					<li data-ecosystem-item data-search={`${item.name} ${item.keywords ?? ''}`.toLowerCase()}>
+						<a class="ecosystem-item group" href={item.href} aria-label={item.name}>
+							<span class="ecosystem-icon" style={`--ecosystem-icon-bg: ${item.background}`}>
+								{item.icon ? (
+									<img class:list={['ecosystem-logo', item.iconClass]} src={item.icon} alt="" loading="lazy" />
 								) : (
 									<span class="ecosystem-default-grid" aria-hidden="true" />
 								)}
@@ -347,6 +374,11 @@ databases.sort(sortDirectoryItems);
 	.ecosystem-logo.ecosystem-logo-large {
 		width: 70%;
 		height: 70%;
+	}
+
+	.ecosystem-logo.ecosystem-logo-tooling {
+		width: 52%;
+		height: 52%;
 	}
 
 	.ecosystem-logo.monochrome-white {

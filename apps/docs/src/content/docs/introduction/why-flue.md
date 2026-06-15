@@ -20,7 +20,7 @@ Some highlights include:
 - **[Tools](/docs/guide/tools/):** Typed actions for calling APIs and changing data.
 - **[Skills](/docs/guide/skills/):** Reusable expertise agents load on demand.
 - **[MCP Servers](/docs/guide/tools/#connect-mcp-servers):** Connect tools and services over the open MCP ecosystem.
-- **[Observability](/docs/guide/observability/):** Export traces to OpenTelemetry, Braintrust, Sentry, and more.
+- **[Observability](/docs/guide/observability/):** Export telemetry with [OpenTelemetry](/docs/ecosystem/tooling/opentelemetry/), [Braintrust](/docs/ecosystem/tooling/braintrust/), [Sentry](/docs/ecosystem/tooling/sentry/), or your own observer.
 - **[Channels](/docs/guide/channels/):** Receive verified provider events and connect them to agents or application code.
 
 ## Design Principles

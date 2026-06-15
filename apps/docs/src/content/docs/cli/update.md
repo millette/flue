@@ -30,7 +30,7 @@ Give the fetched blueprint to a coding agent. How the agent updates the integrat
 
 | Argument        | Description                                                                          |
 | --------------- | ------------------------------------------------------------------------------------ |
-| `<kind>`        | Blueprint kind: `sandbox`, `channel`, or `database`.                                 |
+| `<kind>`        | Blueprint kind: `sandbox`, `channel`, `database`, or `tooling`.                      |
 | `<name-or-url>` | Known blueprint slug or alias, or an absolute URL used as a research starting point. |
 
 ## Options
