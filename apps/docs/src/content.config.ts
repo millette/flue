@@ -1,22 +1,33 @@
 import { defineCollection } from 'astro:content';
-import { docsLoader } from '@astrojs/starlight/loaders';
-import { docsSchema } from '@astrojs/starlight/schema';
+import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
 
 export const collections = {
 	docs: defineCollection({
-		loader: docsLoader(),
-		schema: docsSchema({
-			extend: z.object({
-				lastReviewedAt: z.coerce.date().optional(),
-				subtitle: z.string().optional(),
-				package: z
-					.object({
-						name: z.string(),
-						href: z.url(),
-					})
-					.optional(),
-			}),
+		loader: glob({
+			base: './src/content/docs',
+			pattern: '**/[^_]*.{markdown,mdown,mkdn,mkd,mdwn,md,mdx}',
+		}),
+		schema: z.object({
+			title: z.string(),
+			description: z.string().optional(),
+			lastReviewedAt: z.coerce.date().optional(),
+			subtitle: z.string().optional(),
+			package: z
+				.object({
+					name: z.string(),
+					href: z.url(),
+				})
+				.optional(),
+			tableOfContents: z
+				.union([
+					z.boolean(),
+					z.object({
+						minHeadingLevel: z.number().int().min(1).max(6).optional(),
+						maxHeadingLevel: z.number().int().min(1).max(6).optional(),
+					}),
+				])
+				.optional(),
 		}),
 	}),
 };
