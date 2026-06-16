@@ -76,6 +76,9 @@ importers:
 
   apps/www:
     dependencies:
+      '@astrojs/mdx':
+        specifier: ^5.0.6
+        version: 5.0.6(astro@6.3.7(@types/node@24.13.1)(aws4fetch@1.0.20)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.4)(tsx@4.22.3)(yaml@2.9.0))
       '@paper-design/shaders':
         specifier: 0.0.76
         version: 0.0.76
