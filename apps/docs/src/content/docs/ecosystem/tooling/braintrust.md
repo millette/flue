@@ -25,22 +25,9 @@ if (process.env.BRAINTRUST_API_KEY) {
     apiKey: process.env.BRAINTRUST_API_KEY,
   });
 
-  observe((event, ctx) => braintrustFlueObserver(compatibleEvent(event), ctx), {
-    types: [
-      'run_start',
-      'run_resume',
-      'run_end',
-      'operation_start',
-      'operation',
-      'turn_request',
-      'turn',
-      'tool_start',
-      'tool',
-      'task_start',
-      'task',
-      'compaction_start',
-      'compaction',
-    ],
+  observe((event, ctx) => {
+    const compatible = compatibleEvent(event);
+    if (compatible) braintrustFlueObserver(compatible, ctx);
   });
 }
 ```

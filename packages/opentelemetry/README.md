@@ -7,19 +7,17 @@
 Configure your OpenTelemetry SDK and exporter in your application, then register the observer in `.flue/app.ts`:
 
 ```ts
-import { createOpenTelemetryObserver, observedEventTypes } from '@flue/opentelemetry';
+import { createOpenTelemetryObserver } from '@flue/opentelemetry';
 import { observe } from '@flue/runtime';
 import { flue } from '@flue/runtime/routing';
 import { Hono } from 'hono';
 
-observe(createOpenTelemetryObserver(), { types: observedEventTypes });
+observe(createOpenTelemetryObserver());
 
 const app = new Hono();
 app.route('/', flue());
 export default app;
 ```
-
-`observedEventTypes` lists every event type the observer acts on. Registering with `{ types: observedEventTypes }` lets the runtime skip snapshot serialization for high-frequency streaming delta events that the observer ignores.
 
 Pass a tracer when the application already owns a configured tracer instance:
 
@@ -47,8 +45,8 @@ The resolver runs only when a Flue span has no tracked Flue parent. Return `unde
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `run_start` / `run_resume` / `run_end` | Workflow root span or recovered run-handling segment; `run_resume` adds `flue.workflow.recovery_handling` |
 | `operation_start` / `operation`        | Operation span; root for direct or dispatched processing                                                  |
-| `turn_request` / `turn`                | GenAI inference span named `chat {model}` per the OpenTelemetry GenAI semantic conventions               |
-| `tool_start` / `tool`             | Tool span, including `harness.shell(...)`                                                                 |
+| `turn_request` / `turn`                | GenAI inference span named `chat {model}` per the OpenTelemetry GenAI semantic conventions                |
+| `tool_start` / `tool`                  | Tool span, including `harness.shell(...)`                                                                 |
 | `task_start` / `task`                  | Delegated-task span                                                                                       |
 | `compaction_start` / `compaction`      | Compaction span                                                                                           |
 | `log`                                  | Span event                                                                                                |

@@ -95,51 +95,46 @@ Sentry.init({
 
 const runOwnerTags = new Map<string, Record<string, string>>();
 
-observe(
-	(event) => {
-		if (event.type === 'run_start' || event.type === 'run_resume') {
-			runOwnerTags.set(event.runId, { 'flue.workflow': event.workflowName });
-			return;
-		}
+observe((event) => {
+	if (event.type === 'run_start' || event.type === 'run_resume') {
+		runOwnerTags.set(event.runId, { 'flue.workflow': event.workflowName });
+		return;
+	}
 
-		const tags = flueCorrelationTags(event);
+	const tags = flueCorrelationTags(event);
 
-		if (event.type === 'run_end') {
-			runOwnerTags.delete(event.runId);
-			if (event.isError) captureIncident(event.error, tags, { durationMs: event.durationMs });
-			return;
-		}
+	if (event.type === 'run_end') {
+		runOwnerTags.delete(event.runId);
+		if (event.isError) captureIncident(event.error, tags, { durationMs: event.durationMs });
+		return;
+	}
 
-		if (event.type === 'operation' && event.isError && !event.runId) {
-			captureIncident(event.error, tags, {
-				durationMs: event.durationMs,
-				operationKind: event.operationKind,
-			});
-			return;
-		}
+	if (event.type === 'operation' && event.isError && !event.runId) {
+		captureIncident(event.error, tags, {
+			durationMs: event.durationMs,
+			operationKind: event.operationKind,
+		});
+		return;
+	}
 
-		if (event.type === 'submission_settled' && event.outcome === 'failed') {
-			captureIncident(event.error, tags);
-			return;
-		}
+	if (event.type === 'submission_settled' && event.outcome === 'failed') {
+		captureIncident(event.error, tags);
+		return;
+	}
 
-		if (event.type === 'log' && event.level === 'error') {
-			Sentry.withScope((scope) => {
-				scope.setTags(tags);
-				scope.setLevel('error');
-				if (event.attributes) scope.setContext('flue.log_attributes', event.attributes);
-				if (Object.hasOwn(event.attributes ?? {}, 'error')) {
-					Sentry.captureException(reconstructError(event.attributes?.error));
-				} else {
-					Sentry.captureMessage(event.message, 'error');
-				}
-			});
-		}
-	},
-	{
-		types: ['run_start', 'run_resume', 'run_end', 'operation', 'submission_settled', 'log'],
-	},
-);
+	if (event.type === 'log' && event.level === 'error') {
+		Sentry.withScope((scope) => {
+			scope.setTags(tags);
+			scope.setLevel('error');
+			if (event.attributes) scope.setContext('flue.log_attributes', event.attributes);
+			if (Object.hasOwn(event.attributes ?? {}, 'error')) {
+				Sentry.captureException(reconstructError(event.attributes?.error));
+			} else {
+				Sentry.captureMessage(event.message, 'error');
+			}
+		});
+	}
+});
 
 function captureIncident(
 	error: unknown,

@@ -28,31 +28,41 @@ if (apiKey) {
     apiKey,
   });
 
-  observe(
-    (event, ctx) => braintrustFlueObserver(compatibleEvent(event), ctx),
-    {
-      types: [
-        'run_start', 'run_resume', 'run_end',
-        'operation_start', 'operation',
-        'turn_request', 'turn',
-        'tool_start', 'tool',
-        'task_start', 'task',
-        'compaction_start', 'compaction',
-      ],
-    },
-  );
+  observe((event, ctx) => {
+    const compatible = compatibleEvent(event);
+    if (compatible) braintrustFlueObserver(compatible, ctx);
+  });
 }
 
 function compatibleEvent(event: FlueEvent): unknown {
-  if (event.type === 'run_start') observedRuns.add(event.runId);
-  if (event.type === 'run_end') observedRuns.delete(event.runId);
+  if (event.type === 'run_start') {
+    observedRuns.add(event.runId);
+    return event;
+  }
+  if (event.type === 'run_end') {
+    observedRuns.delete(event.runId);
+    return event;
+  }
   if (event.type === 'tool') return { ...event, type: 'tool_call' };
   if (event.type === 'run_resume') {
     if (observedRuns.has(event.runId)) return event;
     observedRuns.add(event.runId);
     return { ...event, type: 'run_start', payload: undefined };
   }
-  return event;
+  if (
+    event.type === 'operation_start' ||
+    event.type === 'operation' ||
+    event.type === 'turn_request' ||
+    event.type === 'turn' ||
+    event.type === 'tool_start' ||
+    event.type === 'task_start' ||
+    event.type === 'task' ||
+    event.type === 'compaction_start' ||
+    event.type === 'compaction'
+  ) {
+    return event;
+  }
+  return undefined;
 }
 ```
 
@@ -70,14 +80,14 @@ workflow:tools
     llm:<model>
 ```
 
-| Flue activity | Braintrust representation |
-| --- | --- |
-| Workflow invocation | Root `task` span |
-| Prompt, skill, or compaction operation | Nested `task` span |
-| Model turn | Nested `llm` span |
-| Tool call | Nested `tool` span |
-| Delegated task | Nested `task` span |
-| Context compaction | Nested compaction span |
+| Flue activity                          | Braintrust representation |
+| -------------------------------------- | ------------------------- |
+| Workflow invocation                    | Root `task` span          |
+| Prompt, skill, or compaction operation | Nested `task` span        |
+| Model turn                             | Nested `llm` span         |
+| Tool call                              | Nested `tool` span        |
+| Delegated task                         | Nested `task` span        |
+| Context compaction                     | Nested compaction span    |
 
 Workflows are the only Flue executions represented as runs. Direct or dispatched persistent-agent activity uses operation, instance, session, and optional dispatch correlation instead.
 

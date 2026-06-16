@@ -1,5 +1,5 @@
 ---
-{ "kind": "tooling", "version": 1, "website": "https://sentry.io" }
+{ "kind": "tooling", "version": 2, "website": "https://sentry.io" }
 ---
 
 # Add Sentry to Flue
@@ -53,7 +53,7 @@ initialization below. The remaining bridge is shared by both targets.
 ### Node initialization
 
 ```ts title="src/sentry.ts"
-// flue-blueprint: tooling/sentry@1
+// flue-blueprint: tooling/sentry@2
 import { type FlueEvent, observe } from '@flue/runtime';
 import * as Sentry from '@sentry/node';
 
@@ -78,7 +78,7 @@ Flue server. Do not claim complete auto-instrumentation from the late
 ### Cloudflare import
 
 ```ts title="src/sentry.ts"
-// flue-blueprint: tooling/sentry@1
+// flue-blueprint: tooling/sentry@2
 import { type FlueEvent, observe } from '@flue/runtime';
 import * as Sentry from '@sentry/cloudflare';
 ```
@@ -94,51 +94,46 @@ Append this code after the target-specific imports and initialization:
 ```ts
 const runTags = new Map<string, Record<string, string>>();
 
-observe(
-  (event) => {
-    if (event.type === 'run_start' || event.type === 'run_resume') {
-      runTags.set(event.runId, { 'flue.workflow': event.workflowName });
-      return;
-    }
+observe((event) => {
+  if (event.type === 'run_start' || event.type === 'run_resume') {
+    runTags.set(event.runId, { 'flue.workflow': event.workflowName });
+    return;
+  }
 
-    const tags = correlationTags(event);
+  const tags = correlationTags(event);
 
-    if (event.type === 'run_end') {
-      runTags.delete(event.runId);
-      if (!event.isError) return;
-      captureException(event.error, tags, { durationMs: event.durationMs });
-      return;
-    }
+  if (event.type === 'run_end') {
+    runTags.delete(event.runId);
+    if (!event.isError) return;
+    captureException(event.error, tags, { durationMs: event.durationMs });
+    return;
+  }
 
-    if (event.type === 'operation' && event.isError && !event.runId) {
-      captureException(event.error, tags, {
-        durationMs: event.durationMs,
-        operationKind: event.operationKind,
-      });
-      return;
-    }
+  if (event.type === 'operation' && event.isError && !event.runId) {
+    captureException(event.error, tags, {
+      durationMs: event.durationMs,
+      operationKind: event.operationKind,
+    });
+    return;
+  }
 
-    if (event.type === 'submission_settled' && event.outcome === 'failed') {
-      captureException(event.error, tags);
-      return;
-    }
+  if (event.type === 'submission_settled' && event.outcome === 'failed') {
+    captureException(event.error, tags);
+    return;
+  }
 
-    if (event.type === 'log' && event.level === 'error') {
-      Sentry.withScope((scope) => {
-        scope.setTags(tags);
-        scope.setLevel('error');
-        if (Object.hasOwn(event.attributes ?? {}, 'error')) {
-          Sentry.captureException(toError(event.attributes?.error));
-        } else {
-          Sentry.captureMessage(event.message, 'error');
-        }
-      });
-    }
-  },
-  {
-    types: ['run_start', 'run_resume', 'run_end', 'operation', 'submission_settled', 'log'],
-  },
-);
+  if (event.type === 'log' && event.level === 'error') {
+    Sentry.withScope((scope) => {
+      scope.setTags(tags);
+      scope.setLevel('error');
+      if (Object.hasOwn(event.attributes ?? {}, 'error')) {
+        Sentry.captureException(toError(event.attributes?.error));
+      } else {
+        Sentry.captureMessage(event.message, 'error');
+      }
+    });
+  }
+});
 
 function captureException(
   error: unknown,
@@ -198,9 +193,8 @@ export. If there is no `app.ts`, create one that imports `./sentry.ts`, creates 
 Hono application, mounts `flue()` at `/`, and default-exports the app. Install a
 direct `hono` dependency when authoring that file.
 
-`observe(...)` is isolate-local. The explicit `types` filter avoids serializing
-high-frequency events that the bridge does not consume. Workflow failures carry
-`runId` and can be inspected with `flue logs <runId>`. Direct and dispatched
+`observe(...)` is isolate-local. Workflow failures carry `runId` and can be
+inspected with `flue logs <runId>`. Direct and dispatched
 agent interactions are not workflow runs; their failed top-level operations and
 failed durable settlements use agent instance, session, operation, submission,
 and dispatch correlation instead.
@@ -300,3 +294,96 @@ This comparison is required when the marker is missing.
 ### Version 1 — 2026-06-15
 
 Initial version.
+
+### Version 2 — 2026-06-16
+
+Remove the runtime event-type filter. The bridge continues to branch on the event variants it handles.
+
+```diff
+--- a/src/sentry.ts
++++ b/src/sentry.ts
+@@ -1,4 +1,4 @@
+-// flue-blueprint: tooling/sentry@1
++// flue-blueprint: tooling/sentry@2
+@@ -39,51 +39,46 @@ const runTags = new Map<string, Record<string, string>>();
+-observe(
+-  (event) => {
+-    if (event.type === 'run_start' || event.type === 'run_resume') {
+-      runTags.set(event.runId, { 'flue.workflow': event.workflowName });
+-      return;
+-    }
++observe((event) => {
++  if (event.type === 'run_start' || event.type === 'run_resume') {
++    runTags.set(event.runId, { 'flue.workflow': event.workflowName });
++    return;
++  }
+
+-    const tags = correlationTags(event);
++  const tags = correlationTags(event);
+
+-    if (event.type === 'run_end') {
+-      runTags.delete(event.runId);
+-      if (!event.isError) return;
+-      captureException(event.error, tags, { durationMs: event.durationMs });
+-      return;
+-    }
++  if (event.type === 'run_end') {
++    runTags.delete(event.runId);
++    if (!event.isError) return;
++    captureException(event.error, tags, { durationMs: event.durationMs });
++    return;
++  }
+
+-    if (event.type === 'operation' && event.isError && !event.runId) {
+-      captureException(event.error, tags, {
+-        durationMs: event.durationMs,
+-        operationKind: event.operationKind,
+-      });
+-      return;
+-    }
++  if (event.type === 'operation' && event.isError && !event.runId) {
++    captureException(event.error, tags, {
++      durationMs: event.durationMs,
++      operationKind: event.operationKind,
++    });
++    return;
++  }
+
+-    if (event.type === 'submission_settled' && event.outcome === 'failed') {
+-      captureException(event.error, tags);
+-      return;
+-    }
++  if (event.type === 'submission_settled' && event.outcome === 'failed') {
++    captureException(event.error, tags);
++    return;
++  }
+
+-    if (event.type === 'log' && event.level === 'error') {
+-      Sentry.withScope((scope) => {
+-        scope.setTags(tags);
+-        scope.setLevel('error');
+-        if (Object.hasOwn(event.attributes ?? {}, 'error')) {
+-          Sentry.captureException(toError(event.attributes?.error));
+-        } else {
+-          Sentry.captureMessage(event.message, 'error');
+-        }
+-      });
+-    }
+-  },
+-  {
+-    types: ['run_start', 'run_resume', 'run_end', 'operation', 'submission_settled', 'log'],
+-  },
+-);
++  if (event.type === 'log' && event.level === 'error') {
++    Sentry.withScope((scope) => {
++      scope.setTags(tags);
++      scope.setLevel('error');
++      if (Object.hasOwn(event.attributes ?? {}, 'error')) {
++        Sentry.captureException(toError(event.attributes?.error));
++      } else {
++        Sentry.captureMessage(event.message, 'error');
++      }
++    });
++  }
++});
+```

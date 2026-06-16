@@ -1,5 +1,5 @@
 ---
-{ "kind": "tooling", "version": 1, "website": "https://www.braintrust.dev" }
+{ "kind": "tooling", "version": 2, "website": "https://www.braintrust.dev" }
 ---
 
 # Add Braintrust to Flue
@@ -33,10 +33,10 @@ Cloudflare.
 Use these environment variables unless the project already has an established
 Braintrust convention:
 
-| Variable | Purpose |
-| --- | --- |
-| `BRAINTRUST_API_KEY` | Braintrust API key; keep it in the deployment platform's secret store. |
-| `BRAINTRUST_PROJECT_NAME` | Project receiving traces; defaults to `Flue`. |
+| Variable                  | Purpose                                                                |
+| ------------------------- | ---------------------------------------------------------------------- |
+| `BRAINTRUST_API_KEY`      | Braintrust API key; keep it in the deployment platform's secret store. |
+| `BRAINTRUST_PROJECT_NAME` | Project receiving traces; defaults to `Flue`.                          |
 
 Never invent or commit an API key. Update an existing `.env.example`,
 environment type, or deployment documentation when the project maintains one,
@@ -66,7 +66,7 @@ identifiable information.
 Create `<source-dir>/braintrust.ts`:
 
 ```ts title="src/braintrust.ts"
-// flue-blueprint: tooling/braintrust@1
+// flue-blueprint: tooling/braintrust@2
 import { type FlueEvent, observe } from '@flue/runtime';
 import { braintrustFlueObserver, initLogger } from 'braintrust';
 
@@ -79,38 +79,41 @@ if (apiKey) {
     apiKey,
   });
 
-  observe(
-    (event, ctx) => braintrustFlueObserver(compatibleEvent(event), ctx),
-    {
-      types: [
-        'run_start',
-        'run_resume',
-        'run_end',
-        'operation_start',
-        'operation',
-        'turn_request',
-        'turn',
-        'tool_start',
-        'tool',
-        'task_start',
-        'task',
-        'compaction_start',
-        'compaction',
-      ],
-    },
-  );
+  observe((event, ctx) => {
+    const compatible = compatibleEvent(event);
+    if (compatible) braintrustFlueObserver(compatible, ctx);
+  });
 }
 
 function compatibleEvent(event: FlueEvent): unknown {
-  if (event.type === 'run_start') observedRuns.add(event.runId);
-  if (event.type === 'run_end') observedRuns.delete(event.runId);
+  if (event.type === 'run_start') {
+    observedRuns.add(event.runId);
+    return event;
+  }
+  if (event.type === 'run_end') {
+    observedRuns.delete(event.runId);
+    return event;
+  }
   if (event.type === 'tool') return { ...event, type: 'tool_call' };
   if (event.type === 'run_resume') {
     if (observedRuns.has(event.runId)) return event;
     observedRuns.add(event.runId);
     return { ...event, type: 'run_start', payload: undefined };
   }
-  return event;
+  if (
+    event.type === 'operation_start' ||
+    event.type === 'operation' ||
+    event.type === 'turn_request' ||
+    event.type === 'turn' ||
+    event.type === 'tool_start' ||
+    event.type === 'task_start' ||
+    event.type === 'task' ||
+    event.type === 'compaction_start' ||
+    event.type === 'compaction'
+  ) {
+    return event;
+  }
+  return undefined;
 }
 ```
 
@@ -125,10 +128,6 @@ it. This is a compatibility fallback: it loses Flue's distinct recovery
 semantics and does not durably continue the original trace. Re-check the current
 Braintrust observer when upgrading it and remove either translation after the
 SDK accepts the current event directly.
-
-The `types` filter is important for cost as well as routing: Flue serializes an
-isolated event snapshot for every delivered event, and streaming variants can be
-large. Do not subscribe this bridge to event types Braintrust does not consume.
 
 Import the bridge once from source-root `app.ts`:
 
@@ -148,14 +147,14 @@ subscribe and the application runs without trace export.
 
 The observer produces:
 
-| Flue activity | Braintrust trace |
-| --- | --- |
-| Workflow invocation | Root `workflow:<name>` task span |
-| Prompt, skill, or compaction operation | Nested `flue.<kind>` task span |
-| Model turn | `llm:<model>` span with usage and cost metrics |
-| Tool call | Nested `tool:<name>` span |
-| Delegated task | Nested task span |
-| Context compaction | Nested compaction span |
+| Flue activity                          | Braintrust trace                               |
+| -------------------------------------- | ---------------------------------------------- |
+| Workflow invocation                    | Root `workflow:<name>` task span               |
+| Prompt, skill, or compaction operation | Nested `flue.<kind>` task span                 |
+| Model turn                             | `llm:<model>` span with usage and cost metrics |
+| Tool call                              | Nested `tool:<name>` span                      |
+| Delegated task                         | Nested task span                               |
+| Context compaction                     | Nested compaction span                         |
 
 Workflow events carry `runId`. Direct and dispatched persistent-agent activity
 is not a workflow run; Braintrust traces its finite operations and retains agent
@@ -203,3 +202,75 @@ This comparison is required when the marker is missing.
 ### Version 1 — 2026-06-15
 
 Initial version.
+
+### Version 2 — 2026-06-16
+
+Remove the runtime event-type filter and ignore unsupported events inside the bridge.
+
+```diff
+--- a/src/braintrust.ts
++++ b/src/braintrust.ts
+@@ -1,4 +1,4 @@
+-// flue-blueprint: tooling/braintrust@1
++// flue-blueprint: tooling/braintrust@2
+@@ -14,31 +14,34 @@ if (apiKey) {
+-  observe(
+-    (event, ctx) => braintrustFlueObserver(compatibleEvent(event), ctx),
+-    {
+-      types: [
+-        'run_start',
+-        'run_resume',
+-        'run_end',
+-        'operation_start',
+-        'operation',
+-        'turn_request',
+-        'turn',
+-        'tool_start',
+-        'tool',
+-        'task_start',
+-        'task',
+-        'compaction_start',
+-        'compaction',
+-      ],
+-    },
+-  );
++  observe((event, ctx) => {
++    const compatible = compatibleEvent(event);
++    if (compatible) braintrustFlueObserver(compatible, ctx);
++  });
+ }
+
+ function compatibleEvent(event: FlueEvent): unknown {
+-  if (event.type === 'run_start') observedRuns.add(event.runId);
+-  if (event.type === 'run_end') observedRuns.delete(event.runId);
++  if (event.type === 'run_start') {
++    observedRuns.add(event.runId);
++    return event;
++  }
++  if (event.type === 'run_end') {
++    observedRuns.delete(event.runId);
++    return event;
++  }
+   if (event.type === 'tool') return { ...event, type: 'tool_call' };
+   if (event.type === 'run_resume') {
+     if (observedRuns.has(event.runId)) return event;
+     observedRuns.add(event.runId);
+     return { ...event, type: 'run_start', payload: undefined };
+   }
+-  return event;
++  if (
++    event.type === 'operation_start' ||
++    event.type === 'operation' ||
++    event.type === 'turn_request' ||
++    event.type === 'turn' ||
++    event.type === 'tool_start' ||
++    event.type === 'task_start' ||
++    event.type === 'task' ||
++    event.type === 'compaction_start' ||
++    event.type === 'compaction'
++  ) {
++    return event;
++  }
++  return undefined;
+ }
+```

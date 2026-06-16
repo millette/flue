@@ -81,9 +81,9 @@ An operation is the useful finite boundary for agent activity, such as prompting
 
 When an operation is slow or unexpectedly expensive, its nested activity can provide the explanation. One prompt operation may include multiple model turns or tool calls. Model turns expose latency, token usage, and cost; tool activity shows where the agent spent time or encountered an error.
 
-Callbacks registered with `observe(...)` are invoked while Flue emits activity and receive isolated JSON snapshots. Returned promises are observed for rejection but are not awaited. In a distributed deployment, each running application context observes only the activity it handles; use an external backend to aggregate telemetry across processes or isolates.
+Callbacks registered with `observe(...)` are invoked while Flue emits activity and receive every emitted event object directly. Treat events as read-only, branch on `event.type`, and return immediately for activity you do not consume. Keep callbacks lightweight; returned promises are observed for rejection but are not awaited. In a distributed deployment, each running application context observes only the activity it handles; use an external backend to aggregate telemetry across processes or isolates.
 
-Pass `observe(subscriber, { types: [...] })` to restrict delivery to the event types your subscriber handles. This reduces serialization and callback work and limits the sensitive event data exposed to the subscriber. Streaming deltas are best-effort live progress; use `message_end` as the authoritative completed assistant message. A subscriber attached after generation starts may miss earlier partial output until that event arrives. Internal interrupted-turn recovery uses separate durable state and is unaffected.
+Streaming deltas are best-effort live progress; use `message_end` as the authoritative completed assistant message. A subscriber attached after generation starts may miss earlier partial output until that event arrives. Internal interrupted-turn recovery uses separate durable state and is unaffected.
 
 ## Choose an observability provider
 

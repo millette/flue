@@ -23,12 +23,10 @@ pnpm add @flue/opentelemetry @opentelemetry/api
 `@flue/opentelemetry` supplies an observer that converts Flue runtime events into OpenTelemetry spans. Register it once in your application entrypoint, after initializing an OpenTelemetry SDK and exporter:
 
 ```ts title="src/app.ts (abridged)"
-import { createOpenTelemetryObserver, observedEventTypes } from '@flue/opentelemetry';
+import { createOpenTelemetryObserver } from '@flue/opentelemetry';
 import { observe } from '@flue/runtime';
 
-observe(createOpenTelemetryObserver(), {
-  types: observedEventTypes,
-});
+observe(createOpenTelemetryObserver());
 ```
 
 The observer creates spans for workflow runs, finite agent operations, model turns, tools, delegated tasks, and compactions. It also attaches Flue logs to the nearest tracked span. The package does not choose or configure your OpenTelemetry SDK, exporter, sampling, credentials, or shutdown behavior.
@@ -41,7 +39,7 @@ The observer creates spans for workflow runs, finite agent operations, model tur
 | OpenTelemetry exporter                       | **Required for span delivery** — Delivers spans to the selected observability backend.                                      |
 | Sampling, credentials, and shutdown behavior | **Application-specific** — Controls collection, authenticates delivery when needed, and flushes pending spans.              |
 
-Configure the SDK before the observer registration shown above. The adapter uses `trace.getTracer('@flue/opentelemetry')` by default; pass `{ tracer }` when the application already owns a configured tracer. `observedEventTypes` restricts delivery to events the adapter consumes, avoiding serialization work for high-frequency streaming events.
+Configure the SDK before the observer registration shown above. The adapter uses `trace.getTracer('@flue/opentelemetry')` by default; pass `{ tracer }` when the application already owns a configured tracer.
 
 ## What the adapter traces
 
@@ -65,7 +63,7 @@ Workflow and standalone operation spans start as independent roots by default. U
 
 ```ts title="src/app.ts"
 import { context, propagation } from '@opentelemetry/api';
-import { createOpenTelemetryObserver, observedEventTypes } from '@flue/opentelemetry';
+import { createOpenTelemetryObserver } from '@flue/opentelemetry';
 import { observe } from '@flue/runtime';
 
 observe(
@@ -76,7 +74,6 @@ observe(
       return propagation.extract(context.active(), Object.fromEntries(ctx.req.headers));
     },
   }),
-  { types: observedEventTypes },
 );
 ```
 
@@ -109,7 +106,6 @@ observe(
       };
     },
   }),
-  { types: observedEventTypes },
 );
 ```
 

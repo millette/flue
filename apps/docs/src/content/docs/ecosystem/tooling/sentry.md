@@ -27,22 +27,19 @@ Sentry.init({
   tracesSampleRate: 0,
 });
 
-observe(
-  (event) => {
-    if (event.type === 'run_end' && event.isError) {
-      Sentry.captureException(toError(event.error));
-    }
+observe((event) => {
+  if (event.type === 'run_end' && event.isError) {
+    Sentry.captureException(toError(event.error));
+  }
 
-    if (event.type === 'log' && event.level === 'error') {
-      if (Object.hasOwn(event.attributes ?? {}, 'error')) {
-        Sentry.captureException(toError(event.attributes?.error));
-      } else {
-        Sentry.captureMessage(event.message, 'error');
-      }
+  if (event.type === 'log' && event.level === 'error') {
+    if (Object.hasOwn(event.attributes ?? {}, 'error')) {
+      Sentry.captureException(toError(event.attributes?.error));
+    } else {
+      Sentry.captureMessage(event.message, 'error');
     }
-  },
-  { types: ['run_start', 'run_resume', 'run_end', 'log'] },
-);
+  }
+});
 
 function toError(value: unknown): Error {
   return value instanceof Error ? value : new Error(String(value));

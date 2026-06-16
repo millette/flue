@@ -132,18 +132,12 @@ type AttachedAgentEvent = Exclude<
 ### `observe(...)`
 
 ```ts
-function observe(subscriber: FlueEventSubscriber, options?: ObserveOptions): () => void;
-
-interface ObserveOptions {
-  types?: readonly FlueEvent['type'][];
-}
+function observe(subscriber: FlueEventSubscriber): () => void;
 ```
 
-Subscribes to live workflow-run and agent-interaction activity emitted in the current isolate. The returned function unsubscribes the listener. Subscribers run synchronously from the event emission path with isolated JSON snapshots. Keep callbacks lightweight and queue substantial asynchronous work instead of blocking emission. Returned promises are observed for rejection but are not awaited.
+Subscribes to live workflow-run and agent-interaction activity emitted in the current isolate. The returned function unsubscribes the listener. Subscribers run synchronously from the event emission path and receive the emitted event object directly. Treat events as read-only, branch on `event.type`, and return immediately for activity the subscriber does not consume. Keep callbacks lightweight and queue substantial asynchronous work instead of blocking emission. Returned promises are observed for rejection but are not awaited.
 
 `observe()` receives every emitted event, including `turn_request` — the full model-visible request is available to in-process observability without being persisted to the primary database.
-
-Pass `options.types` to restrict delivery to the event types the subscriber handles. This reduces serialization and callback work and limits the sensitive event data exposed to that subscriber. When no registered subscriber listens for an event's type, the event's snapshot is never serialized.
 
 See [Observability](/docs/guide/observability/) for application setup and exporter guidance.
 
@@ -153,7 +147,7 @@ See [Observability](/docs/guide/observability/) for application setup and export
 type FlueEventSubscriber = (event: FlueEvent, ctx: FlueContext) => void | Promise<void>;
 ```
 
-Receives an isolated decorated event snapshot and its originating context. Subscriber failures are logged and do not halt event dispatch or the originating execution. If an event cannot be serialized as JSON, Flue logs the snapshot failure and skips global observer delivery for that event.
+Receives the emitted decorated event object and its originating context. Treat the event as read-only. Subscriber failures are logged and do not halt event dispatch or the originating execution.
 
 ## Public errors
 

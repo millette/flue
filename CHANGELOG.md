@@ -14,6 +14,7 @@
 - **Slack handlers now receive provider-native payloads.** `events`, `interactions`, and `commands` use `{ c, payload }`; Events API callbacks expose the official `SlackEvent` union, and normalized wrappers, fixed-workspace filtering, package timeouts, and legacy interaction types are removed.
 - **Discord handlers now receive provider-native interactions.** Callbacks preserve Discord API v10 fields and numeric discriminants; normalized wrappers, redundant application-id filtering, the non-cancelling package timeout, and redundant guild channel/thread identity are removed.
 - **Google Chat handlers now receive provider-native deliveries.** Direct interactions use `{ c, payload }`, wrapped Workspace Events use `{ c, delivery }`, and normalized event wrappers and the non-cancelling package timeout are removed.
+- **`observe()` now receives every event directly.** The `types` filter and per-subscriber JSON snapshots are removed; callbacks should branch on `event.type` and treat events as read-only.
 
 ### New Features
 
@@ -21,7 +22,7 @@
 - `@flue/runtime` exports `listRuns()`, `getRun()`, and `listAgents()`; SDK `runs.get()` uses public `?meta`; workflow `wait=result` and typed direct-agent prompt responses are supported.
 - `CallHandle` now implements the full Promise interface, and SDK stream coordinates are taken from server responses rather than fabricated.
 - `FlueFs.writeFile()` now guarantees parent directory creation in every sandbox mode; `ShellOptions.timeoutMs` is available for shell operations.
-- `observe()` subscribers can skip selected event types, and OpenTelemetry spans and attributes now align with GenAI semconv.
+- OpenTelemetry spans and attributes now align with GenAI semconv.
 - Added `@flue/react` with `FlueProvider`, `useFlueAgent()`, and `useFlueWorkflow()` for live agent transcripts and workflow-run observation. Agent messages use an AI SDK v5-compatible parts shape without a runtime dependency on `ai`.
 - Added first-party `@flue/stripe`, `@flue/notion`, `@flue/resend`, `@flue/shopify`, `@flue/intercom`, `@flue/zendesk`, `@flue/salesforce-marketing-cloud`, `@flue/teams`, `@flue/google-chat`, `@flue/linear`, `@flue/telegram`, `@flue/whatsapp`, `@flue/twilio`, and `@flue/messenger` packages for verified HTTP ingress, constructor-owned typed handlers, canonical provider identity where available, and discovered `channels/<name>.ts` routing. Existing `@flue/github`, `@flue/slack`, and `@flue/discord` packages were rewritten and expanded around the same channel contract. Named `flue add` blueprints create editable project code using provider SDK or Fetch clients and application-owned tools.
 - `flue add <kind> <name|url>` now serves categorized channel, database, and sandbox blueprints. `flue update <kind> <name|url>` returns the same current guide with versioned primary-file markers and cumulative upgrade instructions so coding agents can update generated integrations while preserving application customizations.
