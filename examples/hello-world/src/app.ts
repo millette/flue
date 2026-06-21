@@ -30,7 +30,7 @@ app.use('*', async (c, next) => {
 	const started = Date.now();
 	await next();
 	const ms = Date.now() - started;
-	// console.log(`[${c.res.status}] ${c.req.method} ${c.req.path} ${ms}ms`);
+	console.log(`[${c.res.status}] ${c.req.method} ${c.req.path} ${ms}ms`);
 });
 
 // Custom route outside Flue's agent API.
