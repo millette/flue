@@ -213,7 +213,10 @@ describe('createOpenTelemetryInstrumentation()', () => {
 			content: {
 				enabled: true,
 				transform(content) {
-					(content as Array<{ parts: Array<{ content: string }> }>)[0]!.parts[0]!.content = 'changed';
+					const [message] = content as Array<{ parts: Array<{ content: string }> }>;
+					const [part] = message?.parts ?? [];
+					if (!part) throw new Error('Expected transformed message content.');
+					part.content = 'changed';
 					return content;
 				},
 			},
@@ -582,7 +585,10 @@ describe('createOpenTelemetryInstrumentation()', () => {
 				},
 				externalContent(content) {
 					delivered.push(content);
-					((content as Array<{ parts: Array<{ content: string }> }>)[0]!.parts[0]!.content) = 'external mutation';
+					const [message] = content as Array<{ parts: Array<{ content: string }> }>;
+					const [part] = message?.parts ?? [];
+					if (!part) throw new Error('Expected external message content.');
+					part.content = 'external mutation';
 					return [{ role: 'user', parts: [] }];
 				},
 			},

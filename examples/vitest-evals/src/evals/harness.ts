@@ -13,8 +13,10 @@ function collectToolCalls(events: AttachedAgentEvent[]): SimpleToolCallRecord[] 
 	const argumentsById = new Map<string, unknown>();
 
 	for (const event of events) {
-		if (event.type === 'tool_start') {
-			argumentsById.set(event.toolCallId, event.args);
+		if (event.type !== 'message_end' || event.message.role !== 'assistant') continue;
+		if (typeof event.message.content === 'string') continue;
+		for (const content of event.message.content) {
+			if (content.type === 'toolCall') argumentsById.set(content.id, content.arguments);
 		}
 	}
 

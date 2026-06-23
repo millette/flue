@@ -67,7 +67,7 @@ export function contentValue(
 	options: ContentValueOptions,
 	diagnostic?: ContentDiagnostic,
 ): ContentValueResult {
-	if (!policy || !policy.enabled || content === undefined) return {};
+	if (policy === false || !policy?.enabled || content === undefined) return {};
 	const scope = contentScope(event, options.contentType);
 	let transformed: unknown;
 	try {
@@ -129,15 +129,16 @@ function applyStructuralLimit(
 		const truncated = value.length - retained.length;
 		return { value: retained, ...(truncated > 0 ? { truncated } : {}) };
 	}
+	const maxMessageParts = policy.limits?.maxMessageParts;
 	if (
 		(contentType === 'input_messages' || contentType === 'output_messages') &&
-		policy.limits?.maxMessageParts !== undefined &&
+		maxMessageParts !== undefined &&
 		Array.isArray(value)
 	) {
 		let truncated = 0;
 		const retained = value.map((message) => {
 			if (!isRecord(message) || !Array.isArray(message.parts)) return message;
-			const parts = message.parts.slice(0, policy.limits!.maxMessageParts);
+			const parts = message.parts.slice(0, maxMessageParts);
 			truncated += message.parts.length - parts.length;
 			return { ...message, parts };
 		});
